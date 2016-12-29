@@ -60,3 +60,9 @@ dat/
 ehthumbs.db
 Icon
 Thumbs.db
+
+# dont commit gnosis files
+*gnosis*
+helloController.*
+helloGnosIS.*
+helloGnosIS_template.*
