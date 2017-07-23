@@ -6630,7 +6630,7 @@ public:
          Interface::WriteKeyedTextDisabled(surface, x,y, caption, hotKey ? hotKey.key : 0, !isEnabled);
    }
 
-   void Update(Box region)
+   void Update(const Box region)
    {
       if(this)
       {
