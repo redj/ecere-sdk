@@ -1,4 +1,4 @@
-.PHONY: all clean realclean distclean emptyoutput prepinstall actualinstall install copyonlyinstall uninstall troubleshoot outputdirs bootstrap deps ecere ecerecom ecerevanilla ear compiler prepbinaries epj2make ide documentor eda prepcodeguard codeguard fixprecompile cleantarget pots installer regenbootstrap updatebootstrap update_ecere update_libec update_ecp update_ecc update_ecs ecereaudio
+.PHONY: all clean realclean distclean emptyoutput prepinstall actualinstall install copyonlyinstall uninstall troubleshoot outputdirs bootstrap deps ecere ecerecom ecerevanilla ear compiler prepbinaries epj2make bgen ide documentor eda prepcodeguard codeguard fixprecompile cleantarget pots installer regenbootstrap updatebootstrap update_ecere update_libec update_ecp update_ecc update_ecs ecereaudio
 ifneq ($(V),1)
 .SILENT:
 endif
@@ -169,7 +169,7 @@ XOBJDIR := obj$(OBJALT)/
 XOBJBINDIR := $(OBJDIR)$(HOST_PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX)/bin/
 XOBJLIBDIR := $(OBJDIR)$(HOST_PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX)/lib/
 
-all: prepbinaries ide epj2make documentor eda codeguard ecereaudio
+all: prepbinaries ide epj2make bgen documentor eda codeguard ecereaudio
 	@$(call echo,The Ecere SDK is fully built.)
 
 outputdirs:
@@ -309,6 +309,10 @@ epj2make: prepbinaries
 	@$(call echo,Building epj2make...)
 	+cd epj2make && $(_MAKE)
 
+bgen: prepbinaries
+	@$(call echo,Building bgen...)
+	+cd bgen && $(_MAKE)
+
 ecereaudio: prepbinaries
 ifneq ($(ECERE_AUDIO),n)
 	@$(call echo,Building EcereAudio...)
@@ -398,6 +402,7 @@ endif
 	$(call rm,$(OBJBINDIR)ecp$(E))
 	$(call rm,$(OBJBINDIR)ecs$(E))
 	$(call rm,$(OBJBINDIR)epj2make$(E))
+	$(call rm,$(OBJBINDIR)bgen$(E))
 	$(call rm,$(OBJBINDIR)ecere-ide$(E))
 	$(call rm,$(OBJBINDIR)documentor$(E))
 ifdef CodeGuard
@@ -411,6 +416,7 @@ cleantarget:
 	+cd ecere && $(_MAKE) cleantarget
 	+cd eda && $(_MAKE) cleantarget
 	+cd epj2make && $(_MAKE) cleantarget
+	+cd bgen && $(_MAKE) cleantarget
 	+cd ide && $(_MAKE) cleantarget
 	+cd installer && $(_MAKE) cleantarget
 ifneq ($(ECERE_AUDIO),n)
@@ -440,6 +446,7 @@ endif
 	+cd compiler && $(_MAKE) clean
 	+cd ear && $(_MAKE) clean
 	+cd epj2make && $(_MAKE) clean
+	+cd bgen && $(_MAKE) clean
 	+cd ide && $(_MAKE) clean
 	+cd documentor && $(_MAKE) clean
 ifneq ($(ECERE_AUDIO),n)
@@ -459,6 +466,7 @@ endif
 	+cd compiler && $(_MAKE) realclean
 	+cd ear && $(_MAKE) realclean
 	+cd epj2make && $(_MAKE) realclean
+	+cd bgen && $(_MAKE) realclean
 	+cd ide && $(_MAKE) realclean
 	+cd documentor && $(_MAKE) realclean
 ifneq ($(ECERE_AUDIO),n)
@@ -490,6 +498,7 @@ BINARIES = \
 	compiler/ecs/obj/release.$(PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX)/ecs$(E) \
 	ear/cmd/obj/release.$(PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX)/ear$(E) \
 	epj2make/obj/release.$(PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX)/epj2make$(E) \
+	bgen/obj/release.$(PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX)/bgen$(E) \
 	documentor/obj/release.$(PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX)/documentor$(E) \
 	ide/obj/release.$(PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX)/ecere-ide$(E) \
 	eda/libeda/obj/release.$(PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX)/$(LP)EDA$(SOV) \
@@ -584,6 +593,7 @@ endif
 	$(call cp,compiler/ecp/obj/release.$(PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX)/ecp$(E),$(OBJBINDIR))
 	$(call cp,compiler/ecs/obj/release.$(PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX)/ecs$(E),$(OBJBINDIR))
 	$(call cp,epj2make/obj/release.$(PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX)/epj2make$(E),$(OBJBINDIR))
+	$(call cp,bgen/obj/release.$(PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX)/bgen$(E),$(OBJBINDIR))
 	$(call cp,documentor/obj/release.$(PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX)/documentor$(E),$(OBJBINDIR))
 ifdef CodeGuard
 	$(call cp,codeGuard/obj/release.$(PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX)/CodeGuard$(E),$(OBJBINDIR))
@@ -619,6 +629,7 @@ endif
 	$(call cp,$(OBJBINDIR)ecp$(E),"$(BINDIR)/")
 	$(call cp,$(OBJBINDIR)ecs$(E),"$(BINDIR)/")
 	$(call cp,$(OBJBINDIR)epj2make$(E),"$(BINDIR)/")
+	$(call cp,$(OBJBINDIR)bgen$(E),"$(BINDIR)/")
 	$(call cp,$(OBJBINDIR)documentor$(E),"$(BINDIR)/")
 ifdef CodeGuard
 	$(call cp,$(OBJBINDIR)CodeGuard$(E),"$(BINDIR)/")
@@ -648,6 +659,7 @@ endif
 	install $(OBJBINDIR)ecp$(E) $(BINDIR)/
 	install $(OBJBINDIR)ecs$(E) $(BINDIR)/
 	install $(OBJBINDIR)epj2make$(E) $(BINDIR)/
+	install $(OBJBINDIR)bgen$(E) $(BINDIR)/
 	install $(OBJBINDIR)documentor$(E) $(BINDIR)/
 ifdef CodeGuard
 	install $(OBJBINDIR)CodeGuard$(E) $(BINDIR)/
@@ -722,6 +734,7 @@ endif
 	install $(INSTALL_FLAGS) $(OBJBINDIR)ecp$(E) $(BINDIR)/ecp$(E)
 	install $(INSTALL_FLAGS) $(OBJBINDIR)ecs$(E) $(BINDIR)/ecs$(E)
 	install $(INSTALL_FLAGS) $(OBJBINDIR)epj2make$(E) $(BINDIR)/epj2make$(E)
+	install $(INSTALL_FLAGS) $(OBJBINDIR)bgen$(E) $(BINDIR)/bgen$(E)
 	install $(INSTALL_FLAGS) $(OBJBINDIR)documentor$(E) $(BINDIR)/documentor$(E)
 ifdef CodeGuard
 	install $(INSTALL_FLAGS) $(OBJBINDIR)CodeGuard$(E) $(BINDIR)/CodeGuard$(E)
@@ -797,6 +810,7 @@ endif
 	$(call rm,"$(BINDIR)/ecp$(E)")
 	$(call rm,"$(BINDIR)/ecs$(E)")
 	$(call rm,"$(BINDIR)/epj2make$(E)")
+	$(call rm,"$(BINDIR)/bgen$(E)")
 	$(call rm,"$(BINDIR)/documentor$(E)")
 ifdef CodeGuard
 	$(call rm,"$(BINDIR)/CodeGuard$(E)")
