@@ -1,4 +1,4 @@
-.PHONY: all clean realclean distclean emptyoutput prepinstall actualinstall install copyonlyinstall uninstall troubleshoot outputdirs bootstrap deps ecere ecerecom ecerevanilla ear compiler prepbinaries epj2make bgen ide documentor eda prepcodeguard codeguard fixprecompile cleantarget pots installer regenbootstrap updatebootstrap update_ecere update_libec update_ecp update_ecc update_ecs ecereaudio
+.PHONY: all clean realclean distclean emptyoutput prepinstall actualinstall install copyonlyinstall uninstall troubleshoot outputdirs bootstrap deps ecere ecerecom ecerevanilla ear compiler prepbinaries epj2make bgen bindingsgen bindings ide documentor eda prepcodeguard codeguard fixprecompile cleantarget pots installer regenbootstrap updatebootstrap update_ecere update_libec update_ecp update_ecc update_ecs ecereaudio
 ifneq ($(V),1)
 .SILENT:
 endif
@@ -313,6 +313,12 @@ bgen: prepbinaries
 	@$(call echo,Building bgen...)
 	+cd bgen && $(_MAKE)
 
+bindingsgen: bgen
+	+cd bindings && $(_MAKE) gen
+
+bindings: bgen
+	+cd bindings && $(_MAKE)
+
 ecereaudio: prepbinaries
 ifneq ($(ECERE_AUDIO),n)
 	@$(call echo,Building EcereAudio...)
@@ -417,6 +423,7 @@ cleantarget:
 	+cd eda && $(_MAKE) cleantarget
 	+cd epj2make && $(_MAKE) cleantarget
 	+cd bgen && $(_MAKE) cleantarget
+	+cd bindings && $(_MAKE) realclean
 	+cd ide && $(_MAKE) cleantarget
 	+cd installer && $(_MAKE) cleantarget
 ifneq ($(ECERE_AUDIO),n)
@@ -447,6 +454,7 @@ endif
 	+cd ear && $(_MAKE) clean
 	+cd epj2make && $(_MAKE) clean
 	+cd bgen && $(_MAKE) clean
+	+cd bindings && $(_MAKE) clean
 	+cd ide && $(_MAKE) clean
 	+cd documentor && $(_MAKE) clean
 ifneq ($(ECERE_AUDIO),n)
@@ -467,6 +475,7 @@ endif
 	+cd ear && $(_MAKE) realclean
 	+cd epj2make && $(_MAKE) realclean
 	+cd bgen && $(_MAKE) realclean
+	+cd bindings && $(_MAKE) realclean
 	+cd ide && $(_MAKE) realclean
 	+cd documentor && $(_MAKE) realclean
 ifneq ($(ECERE_AUDIO),n)
