@@ -1,8 +1,8 @@
 include ../bgen_setup.mk
 
-_BGEN_LIBS := ecereCOM ecere EDA
+_BGEN_LIBS := ecereCOM ecere
 _BGEN_LANGNAME := C
-_BGEN_ARGS := -c $(addprefix -lib$(space),$(_BGEN_LIBS)) -quiet -all -map fren Log=__log Logf=__logf Sleep=__sleep .
+_BGEN_ARGS := -c $(addprefix -lib$(space),$(_BGEN_LIBS)) -quiet -all -map fren Log=__e_log Logf=__e_logf Sleep=__sleep print=_print .
 _BGEN_OUTPUT := \
 	eC.c \
 	eC.h \
@@ -16,7 +16,7 @@ all: gen
 	+cd ecereCOM && $(_MAKE)
 	@$(call echo,Building C Bindings for ecere...)
 	+cd ecere && $(_MAKE)
-	@$(call echo,Building C Bindings for EDA...)
-	+cd EDA && $(_MAKE)
+#	@$(call echo,Building C Bindings for EDA...)
+#	+cd EDA && $(_MAKE)
 
 include ../bgen_targets.mk
