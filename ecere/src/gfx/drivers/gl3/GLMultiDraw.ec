@@ -20,7 +20,7 @@ public define transform3Attribute = 12;
 
 private:
 
-// #define CLIENT_MEM_COMMANDS  // Defined as a work-around for Intel driver that does not seem to support indirect commands buffers?
+#define CLIENT_MEM_COMMANDS  // Defined as a work-around for Intel driver that does not seem to support indirect commands buffers?
 
 #define GL_CLAMP_TO_EDGE 0x812F
 
