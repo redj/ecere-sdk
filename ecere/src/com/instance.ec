@@ -2137,7 +2137,7 @@ public void CheckMemory()
    printf("Memory Check Completed.\n");
    fflush(stdout);
 #if defined(__WIN32__) && !defined(ECERE_BOOTSTRAP)
-   if(memoryErrorsCount)
+   // if(memoryErrorsCount)
       system("pause");
 #endif
 #endif
