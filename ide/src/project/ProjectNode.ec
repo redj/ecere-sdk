@@ -1568,7 +1568,8 @@ private:
 
    int GenMakefilePrintNode(File f, Project project, GenMakefilePrintTypes printType,
       Map<CIString, NameCollisionInfo> namesInfo, Array<String> items,
-      ProjectConfig prjConfig, bool * containsCXX)
+      ProjectConfig prjConfig, bool * containsCXX, bool * containsCPLMK,
+      MakefileGenerationOptions opt)
    {
       int count = 0;
       if(type == file)
@@ -1599,6 +1600,8 @@ private:
             EscapeForMake(modulePath, tempPath, false, true, false);
             sprintf(s, "%s%s%s%s", ts.a, useRes ? "$(RES)" : "", modulePath, ts.b);
             items.Add(CopyString(s));
+            if(containsCPLMK && !strcmp(name, "crossplatform.mk"))
+               *containsCPLMK = true;
          }
          else if(printType == sources)
          {
@@ -1613,15 +1616,18 @@ private:
                items.Add(CopyString(s));
             }
          }
-         else if(printType == eCsources)
+         else if(printType == eCsources || printType == eC_noPrint)
          {
             if(!strcmpi(extension, "ec"))
             {
-               char modulePath[MAX_LOCATION];
-               EscapeForMake(modulePath, path, true, true, false);
-               EscapeForMake(moduleName, name, true, true, false);
-               sprintf(s, "%s%s%s%s%s", ts.a, modulePath, path[0] ? SEPS : "", moduleName, ts.b);
-               items.Add(CopyString(s));
+               if(printType == eCsources)
+               {
+                  char modulePath[MAX_LOCATION];
+                  EscapeForMake(modulePath, path, true, true, false);
+                  EscapeForMake(moduleName, name, true, true, false);
+                  sprintf(s, "%s%s%s%s%s", ts.a, modulePath, path[0] ? SEPS : "", moduleName, ts.b);
+                  items.Add(CopyString(s));
+               }
                count++;
             }
          }
@@ -1650,7 +1656,9 @@ private:
                StripExtension(moduleName);
                info = namesInfo[moduleName];
                collision = info ? info.IsExtensionColliding(extension) : false;
-               sprintf(s, "%s$(OBJ)%s%s%s$(O)%s", ts.a, moduleName, collision ? "." : "", collision ? extension : "", ts.b);
+               sprintf(s, "%s$(OBJ)%s%s%s%s%s", ts.a, moduleName,
+                     collision ? "." : "", collision ? extension : "",
+                     !opt.noVarForObjectExt ? "$(O)" : ".o", ts.b);
                items.Add(CopyString(s));
             }
             else if(printType == noPrint && containsCXX &&
@@ -1664,7 +1672,7 @@ private:
          for(child : files)
          {
             if(child.type != resources && (child.type == folder || !child.GetIsExcluded(prjConfig)))
-               count += child.GenMakefilePrintNode(f, project, printType, namesInfo, items, prjConfig, containsCXX);
+               count += child.GenMakefilePrintNode(f, project, printType, namesInfo, items, prjConfig, containsCXX, containsCPLMK, opt);
          }
       }
       return count;
@@ -1672,7 +1680,8 @@ private:
 
    void GenMakefilePrintSymbolRules(File f, Project project,
          ProjectConfig prjConfig, //Map<Platform, bool> parentExcludedPlatforms,
-         Map<intptr, int> nodeCFlagsMapping, Map<intptr, int> nodeECFlagsMapping)
+         Map<intptr, int> nodeCFlagsMapping, Map<intptr, int> nodeECFlagsMapping,
+         MakefileGenerationOptions opt)
    {
       int ifCount = 0;
       Array<Platform> platforms = GetPlatformsArrayFromExclusionInfo(prjConfig);
@@ -1692,18 +1701,25 @@ private:
          {
             //DualPipe dep;
             //char command[2048];
+            String prereq;
+            String target;
+            const String prereqOpt;
+            const String targetOpt;
 
             ReplaceSpaces(moduleName, name);
             StripExtension(moduleName);
 
             ReplaceSpaces(modulePath, path);
             if(modulePath[0]) strcat(modulePath, SEPS);
+            prereq = PrintString(modulePath, moduleName, ".", extension);
+            prereqOpt = opt.noSpecialVarPrereqName ? prereq : "$<";
+            target = PrintString("$(OBJ)", moduleName, ".sym");
+            targetOpt = opt.noSpecialVarTargetName ? target : "$@";
 
             OpenRulesPlatformExclusionIfs(f, &ifCount, platforms);
 #if 0
             // *** Dependency command ***
-            sprintf(command, "gcc -MT $(OBJ)%s.o -MM %s%s.%s", moduleName,
-               modulePath, moduleName, extension);
+            sprintf(command, "gcc -MT $(OBJ)%s.o -MM %s", moduleName, prereq);
 
             // System Includes (from global settings)
             for(item : compiler.dirs[Includes])
@@ -1771,8 +1787,7 @@ private:
                if(!result)
                {
 #endif
-                  f.Printf("$(OBJ)%s.sym: %s%s.%s\n",
-                     moduleName, modulePath, moduleName, extension);
+                  f.Printf("%s: %s\n", target, prereq);
 
                   f.Puts("\t$(ECP)");
 
@@ -1782,13 +1797,16 @@ private:
                   GenMakePrintNodeFlagsVariable(this, nodeECFlagsMapping, "ECFLAGS", f);
                   GenMakePrintNodeFlagsVariable(this, nodeCFlagsMapping, "PRJ_CFLAGS", f);
 
-                  f.Printf(" -c $(call quote_path,%s%s.%s) -o $(call quote_path,$@)\n",
-                     modulePath, moduleName, extension);
+                  f.Printf(" -c %s%s%s -o %s%s%s\n",
+                        opt.NQP ? "" : "$(call quote_path,", prereqOpt, opt.NQP ? "" : ")",
+                        opt.NQT ? "" : "$(call quote_path,", targetOpt, opt.NQT ? "" : ")");
                   if(ifCount) f.Puts("endif\n");
                   f.Puts("\n");
 #if 0
                }
             }
+            delete prereq;
+            delete target;
 #endif
          }
       }
@@ -1800,7 +1818,7 @@ private:
             {
                if(child.type != resources && (child.type == folder || !child.GetIsExcluded(prjConfig)))
                   child.GenMakefilePrintSymbolRules(f, project, prjConfig, /*excludedPlatforms,*/
-                        nodeCFlagsMapping, nodeECFlagsMapping);
+                        nodeCFlagsMapping, nodeECFlagsMapping, opt);
             }
          }
       }
@@ -1809,7 +1827,8 @@ private:
 
    void GenMakefilePrintPrepecsRules(File f, Project project,
          ProjectConfig prjConfig, /*Map<Platform, bool> parentExcludedPlatforms,*/
-         Map<intptr, int> nodeCFlagsMapping, Map<intptr, int> nodeECFlagsMapping)
+         Map<intptr, int> nodeCFlagsMapping, Map<intptr, int> nodeECFlagsMapping,
+         MakefileGenerationOptions opt)
    {
       int ifCount = 0;
       Array<Platform> platforms = GetPlatformsArrayFromExclusionInfo(prjConfig);
@@ -1827,17 +1846,23 @@ private:
          GetExtension(name, extension);
          if(!strcmpi(extension, "ec"))
          {
+            String prereq;
+            String target;
+            const String prereqOpt;
+            const String targetOpt;
             ReplaceSpaces(moduleName, name);
             StripExtension(moduleName);
 
             ReplaceSpaces(modulePath, path);
             if(modulePath[0]) strcat(modulePath, SEPS);
+            prereq = PrintString(modulePath, moduleName, ".", extension);
+            prereqOpt = opt.noSpecialVarPrereqName ? prereq : "$<";
+            target = PrintString("$(OBJ)", moduleName, "$(EC)");
+            targetOpt = opt.noSpecialVarTargetName ? target : "$@";
 
             OpenRulesPlatformExclusionIfs(f, &ifCount, platforms);
-            f.Printf("$(OBJ)%s$(EC): %s%s.%s\n",
-               moduleName, modulePath, moduleName, extension);
-            /*f.Printf("\t$(CPP) %s%s.%s %s$(S)\n\n",
-               modulePath, moduleName, extension, moduleName);*/
+            f.Printf("%s: %s\n", target, prereq);
+            // f.Printf("\t$(CPP) %s %s$(S)\n\n", prereq, moduleName);
 
             f.Puts("\t$(CPP)");
 
@@ -1846,10 +1871,11 @@ private:
             //GenMakePrintNodeFlagsVariable(this, nodeECFlagsMapping, "ECFLAGS", f);
             GenMakePrintNodeFlagsVariable(this, nodeCFlagsMapping, "PRJ_CFLAGS", f);
 
-            f.Printf(" -x c -E %s%s.%s -o $(OBJ)%s$(EC)\n",
-               modulePath, moduleName, extension, moduleName);
+            f.Printf(" -x c -E %s -o %s\n", prereqOpt, targetOpt);
             if(ifCount) f.Puts("endif\n");
             f.Puts("\n");
+            delete prereq;
+            delete target;
          }
       }
       if(files)
@@ -1860,7 +1886,7 @@ private:
             {
                if(child.type != resources && (child.type == folder || !child.GetIsExcluded(prjConfig)))
                   child.GenMakefilePrintPrepecsRules(f, project, prjConfig, /*excludedPlatforms,*/
-                        nodeCFlagsMapping, nodeECFlagsMapping);
+                        nodeCFlagsMapping, nodeECFlagsMapping, opt);
             }
          }
       }
@@ -1869,7 +1895,8 @@ private:
 
    void GenMakefilePrintCObjectRules(File f, Project project,
       ProjectConfig prjConfig, /*Map<Platform, bool> parentExcludedPlatforms,*/
-      Map<intptr, int> nodeCFlagsMapping, Map<intptr, int> nodeECFlagsMapping)
+      Map<intptr, int> nodeCFlagsMapping, Map<intptr, int> nodeECFlagsMapping,
+      MakefileGenerationOptions opt)
    {
       int ifCount = 0;
       Array<Platform> platforms = GetPlatformsArrayFromExclusionInfo(prjConfig);
@@ -1888,18 +1915,25 @@ private:
          {
             //DualPipe dep;
             //char command[2048];
+            String prereq;
+            String target;
+            const String prereqOpt;
+            const String targetOpt;
 
             ReplaceSpaces(moduleName, name);
             StripExtension(moduleName);
 
             ReplaceSpaces(modulePath, path);
             if(modulePath[0]) strcat(modulePath, SEPS);
+            prereq = PrintString(modulePath, moduleName, ".", extension);
+            prereqOpt = opt.noSpecialVarPrereqName ? prereq : "$<";
+            target = PrintString("$(OBJ)", moduleName, ".c");
+            targetOpt = opt.noSpecialVarTargetName ? target : "$@";
 
             OpenRulesPlatformExclusionIfs(f, &ifCount, platforms);
 #if 0
             // *** Dependency command ***
-            sprintf(command, "gcc -MT $(OBJ)%s.o -MM %s%s.%s",
-               moduleName, modulePath, moduleName, extension);
+            sprintf(command, "gcc -MT $(OBJ)%s.o -MM %s", moduleName, prereq);
 
             // System Includes (from global settings)
             for(item : compiler.dirs[Includes])
@@ -1966,21 +2000,14 @@ private:
                // If we failed to generate dependencies...
                if(!result)
                {
-                  /* COMMENTED OUT FOR NOW
-                  f.Printf("$(OBJ)%s.c: %s%s.%s $(Symbols)\n",
-                     moduleName, modulePath, moduleName, extension);
-                  */
+                  // COMMENTED OUT FOR NOW // f.Printf("$(OBJ)%s.c: %s $(Symbols)\n", moduleName, prereq);
 #endif
-                  f.Printf("$(OBJ)%s.c: %s%s.%s $(OBJ)%s.sym | $(SYMBOLS)\n",
-                     moduleName, modulePath, moduleName, extension, moduleName);
+                  f.Printf("%s: %s $(OBJ)%s.sym | $(SYMBOLS)\n", target, prereq, moduleName);
 #if 0
                }
             }
 #endif
-         /*
-            f.Printf("\t$(ECC) %s%s.%s $(OBJ)%s.c\n\n",
-               modulePath, moduleName, extension, moduleName);
-         */
+         // f.Printf("\t$(ECC) %s $(OBJ)%s.c\n\n", prereq, moduleName);
 
             f.Puts("\t$(ECC)");
 
@@ -1990,10 +2017,13 @@ private:
             GenMakePrintNodeFlagsVariable(this, nodeCFlagsMapping, "PRJ_CFLAGS", f);
             f.Puts(" $(FVISIBILITY)");
 
-            f.Printf(" -c $(call quote_path,%s%s.%s) -o $(call quote_path,$@) -symbols $(OBJ)\n",
-               modulePath, moduleName, extension);
+            f.Printf(" -c %s%s%s -o %s%s%s -symbols $(OBJ)\n",
+                  opt.NQP ? "" : "$(call quote_path,", prereqOpt, opt.NQP ? "" : ")",
+                  opt.NQT ? "" : "$(call quote_path,", targetOpt, opt.NQT ? "" : ")");
             if(ifCount) f.Puts("endif\n");
             f.Puts("\n");
+            delete prereq;
+            delete target;
          }
       }
       if(files)
@@ -2004,7 +2034,7 @@ private:
             {
                if(child.type != resources && (child.type == folder || !child.GetIsExcluded(prjConfig)))
                   child.GenMakefilePrintCObjectRules(f, project, prjConfig, /*excludedPlatforms,*/
-                        nodeCFlagsMapping, nodeECFlagsMapping);
+                        nodeCFlagsMapping, nodeECFlagsMapping, opt);
             }
          }
       }
@@ -2015,7 +2045,8 @@ private:
       Map<CIString, NameCollisionInfo> namesInfo,
       ProjectConfig prjConfig,
       //Map<Platform, bool> parentExcludedPlatforms,
-      Map<intptr, int> nodeCFlagsMapping, Map<intptr, int> nodeECFlagsMapping)
+      Map<intptr, int> nodeCFlagsMapping, Map<intptr, int> nodeECFlagsMapping,
+      MakefileGenerationOptions opt)
    {
       int ifCount = 0;
       Array<Platform> platforms = GetPlatformsArrayFromExclusionInfo(prjConfig);
@@ -2026,17 +2057,24 @@ private:
       if(type == file)
       {
          bool collision;
+         bool ec;
          char extension[MAX_EXTENSION];
          char modulePath[MAX_LOCATION];
          char moduleName[MAX_FILENAME];
 
          GetExtension(name, extension);
-         if(!strcmpi(extension, "s") || !strcmpi(extension, "c") || !strcmpi(extension, "rc") ||
+         ec = !strcmpi(extension, "ec");
+         if(ec ||
+               !strcmpi(extension, "s") || !strcmpi(extension, "c") || !strcmpi(extension, "rc") ||
                !strcmpi(extension, "cpp") || !strcmpi(extension, "cc") || !strcmpi(extension, "cxx") ||
-               !strcmpi(extension, "m") || !strcmpi(extension, "mm") || !strcmpi(extension, "ec"))
+               !strcmpi(extension, "m") || !strcmpi(extension, "mm"))
          {
             //DualPipe dep;
             //char command[2048];
+            String prereq;
+            String target;
+            const String prereqOpt;
+            const String targetOpt;
             NameCollisionInfo info;
 
             ReplaceSpaces(moduleName, name);
@@ -2047,17 +2085,27 @@ private:
 
             ReplaceSpaces(modulePath, path);
             if(modulePath[0]) strcat(modulePath, SEPS);
+            if(ec)
+               prereq = PrintString("$(OBJ)", moduleName, ".c");
+            else
+               prereq = PrintString(modulePath, moduleName, ".", extension);
+            prereqOpt = opt.noSpecialVarPrereqName ? prereq : "$<";
+            if(ec)
+               target = PrintString("$(OBJ)", moduleName, !opt.noVarForObjectExt ? "$(O)" : ".o");
+            else
+               target = PrintString("$(OBJ)", moduleName, collision ? "." : "", collision ? extension : "", !opt.noVarForObjectExt ? "$(O)" : ".o");
+            targetOpt = opt.noSpecialVarTargetName ? target : "$@";
 
             /*
 #if 0
             // *** Dependency command ***
-            if(!strcmpi(extension, "ec"))
+            if(ec)
                sprintf(command, "%s -MT $(OBJ)%s.o -MM $(OBJ)%s.c", "$(CPP)", moduleName, moduleName);
             else
-               sprintf(command, "%s -MT $(OBJ)%s.o -MM %s%s.%s", (!strcmpi(extension, "cc") || !strcmpi(extension, "cxx") || !strcmpi(extension, "cpp")) ? "$(CXX)" : "$(CC)",
-                  moduleName, modulePath, moduleName, extension);
+               sprintf(command, "%s -MT $(OBJ)%s.o -MM %s", (!strcmpi(extension, "cc") || !strcmpi(extension, "cxx") || !strcmpi(extension, "cpp")) ? "$(CXX)" : "$(CC)",
+                  moduleName, prereq);
 
-            if(!strcmpi(extension, "ec"))
+            if(ec)
             {
                f.Printf("$(OBJ)%s.o: $(OBJ)%s.c\n", moduleName, moduleName);
             }
@@ -2143,32 +2191,30 @@ private:
             else
                OpenRulesPlatformExclusionIfs(f, &ifCount, platforms);
 
-            if(!strcmpi(extension, "ec"))
-               f.Printf("$(OBJ)%s$(O): $(OBJ)%s.c\n", moduleName, moduleName);
-            else
-               f.Printf("$(OBJ)%s%s%s$(O): %s%s.%s\n",
-                     moduleName, collision ? "." : "", collision ? extension : "",
-                     modulePath, moduleName, extension);
+            f.Printf("%s: %s\n", target, prereq);
             if(!strcmpi(extension, "cc") || !strcmpi(extension, "cpp") || !strcmpi(extension, "cxx"))
                f.Printf("\t$(CXX) $(CXXFLAGS)");
             else if(!strcmpi(extension, "rc"))
-               f.Printf("\t$(WINDRES) $(WINDRES_FLAGS) $< \"$(call escspace,$(call quote_path,$@))\"\n");
+            {
+               f.Printf("\t$(WINDRES) $(WINDRES_FLAGS) %s%s%s %s%s%s\n",
+                     opt.NQP ? "" : "$(call quote_path,", prereqOpt, opt.NQP ? "" : ")",
+                     opt.NQT ? "" : "\"$(call escspace,$(call quote_path,", targetOpt, opt.NQT ? "" : "))\"");
+            }
             else
                f.Printf("\t$(CC) $(CFLAGS)");
 
             if(strcmpi(extension, "rc") != 0)
             {
                GenMakePrintNodeFlagsVariable(this, nodeCFlagsMapping, "PRJ_CFLAGS", f);
-
-               if(!strcmpi(extension, "ec"))
-                  f.Printf(" $(FVISIBILITY) -c $(call quote_path,$(OBJ)%s.c) -o $(call quote_path,$@)\n",
-                        moduleName);
-               else
-                  f.Printf(" -c $(call quote_path,%s%s.%s) -o $(call quote_path,$@)\n",
-                        modulePath, moduleName, !strcmpi(extension, "ec") ? "c" : extension);
+               f.Printf("%s -c %s%s%s -o %s%s%s\n",
+                     ec ? " $(FVISIBILITY)" : "",
+                     opt.NQP ? "" : "$(call quote_path,", prereqOpt, opt.NQP ? "" : ")",
+                     opt.NQT ? "" : "$(call quote_path,", targetOpt, opt.NQT ? "" : ")");
             }
             if(ifCount) f.Puts("endif\n");
             f.Puts("\n");
+            delete prereq;
+            delete target;
          }
       }
       if(files)
@@ -2188,7 +2234,7 @@ private:
             {
                if(child.type != resources && (child.type == folder || !child.GetIsExcluded(prjConfig)))
                   child.GenMakefilePrintObjectRules(f, project, namesInfo, prjConfig, /*excludedPlatforms,*/
-                        nodeCFlagsMapping, nodeECFlagsMapping);
+                        nodeCFlagsMapping, nodeECFlagsMapping, opt);
             }
          }
       }
@@ -2274,7 +2320,8 @@ private:
    void GenMakeCollectAssignNodeFlags(ProjectConfig prjConfig, bool prjWithEcFiles,
          Map<String, int> cflagsVariations, Map<intptr, int> nodeCFlagsMapping,
          Map<String, int> ecflagsVariations, Map<intptr, int> nodeECFlagsMapping,
-         Map<Platform, ProjectOptions> parentByPlatformOptions)
+         Map<Platform, ProjectOptions> parentByPlatformOptions,
+         MakefileGenerationOptions opt)
    {
       Map<Platform, ProjectOptions> byPlatformOptions = parentByPlatformOptions;
       if(type == file || type == folder || type == project)
@@ -2362,7 +2409,7 @@ private:
                {
                   byFileConfigPlatformProjectOptions = isGreater ? additionsByPlatformOptions[platform] : byPlatformOptions[platform];
                   s = { };
-                  GenCFlagsFromProjectOptions(byFileConfigPlatformProjectOptions, prjWithEcFiles, false, isGreater, s);
+                  GenCFlagsFromProjectOptions(byFileConfigPlatformProjectOptions, prjWithEcFiles, false, isGreater, opt, s);
                   if(s.count > 1)
                      cflags.concatf(" \\\n\t $(if $(%s),%s,)", PlatformToMakefileTargetVariable(platform), (String)s);
                   delete s;
@@ -2375,7 +2422,7 @@ private:
 
                platformsCommonOptions = isGreater ? additionsByPlatformOptions[unknown] : byPlatformOptions[unknown];
                s = { };
-               GenCFlagsFromProjectOptions(platformsCommonOptions, prjWithEcFiles, true, isGreater, s);
+               GenCFlagsFromProjectOptions(platformsCommonOptions, prjWithEcFiles, true, isGreater, opt, s);
                if(s.count > 1)
                {
                   if(!isGreater) cflags.concat(" \\\n\t");
@@ -2444,7 +2491,7 @@ private:
             if(child.type != resources && (child.type == folder || !child.GetIsExcluded(prjConfig)))
                child.GenMakeCollectAssignNodeFlags(prjConfig, prjWithEcFiles,
                      cflagsVariations, nodeCFlagsMapping, ecflagsVariations, nodeECFlagsMapping,
-                     byPlatformOptions);
+                     byPlatformOptions, opt);
          }
       }
 
@@ -3155,7 +3202,8 @@ static void DynStringPrintNodeFlagsVariable(ProjectNode node, Map<intptr, int> n
       s.concatf(" $(%s)", variableName);
 }
 
-static void GenCFlagsFromProjectOptions(ProjectOptions options, bool prjWithEcFiles, bool commonOptions, bool isGreater, DynamicString s)
+static void GenCFlagsFromProjectOptions(ProjectOptions options, bool prjWithEcFiles,
+      bool commonOptions, bool isGreater, MakefileGenerationOptions opt, DynamicString s)
 {
    if(!isGreater)
    {
@@ -3194,14 +3242,16 @@ static void GenCFlagsFromProjectOptions(ProjectOptions options, bool prjWithEcFi
       }
       if(options.profile)
          s.concat(" -pg");
-      if(commonOptions)
-         s.concat(" -DREPOSITORY_VERSION=\"\\\"$(REPOSITORY_VER)\\\"\"");
+      /*if(commonOptions)
+         s.concat(" $(FVISIBILITY)");*/
+      if(commonOptions && !opt.noRepositoryVersion)
+         s.concat(" \\\n\t\t -DREPOSITORY_VERSION=\"\\\"$(REPOSITORY_VER)\\\"\"");
    }
 
    if(options && options.preprocessorDefinitions)
-      ListOptionToDynamicString(s, _D, options.preprocessorDefinitions, false, lineEach, "\t\t\t");
+      ListOptionToDynamicString(s, _D, options.preprocessorDefinitions, false, lineEach, "\t\t");
    if(options && options.includeDirs)
-      ListOptionToDynamicString(s, _I, options.includeDirs, true, lineEach, "\t\t\t");
+      ListOptionToDynamicString(s, _I, options.includeDirs, true, lineEach, "\t\t");
 }
 
 static void GenECFlagsFromProjectOptions(ProjectOptions options, bool prjWithEcFiles, DynamicString s)
