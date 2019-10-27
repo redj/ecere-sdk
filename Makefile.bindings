@@ -113,6 +113,15 @@ bindingsbuildc: bindingsgenc
 	$(call bg_bind_____echo,9,c)
 	$(call bg_bind_cd_build,9,c,all)
 
+.PHONY: bindingstestc
+bindingstestc:	bindingsbuildc
+	@$(call echo,Testing C bindings...)
+#	$(call mkdir,tests)
+#	$(call mkdir,tests/bindings)
+#	$(call mkdir,tests/bindings/c)
+#	$(call mkdir,tests/bindings/c/01)
+
+
 .PHONY: bindingscleanc
 bindingscleanc:
 # todo: missing bgen output cleaning
