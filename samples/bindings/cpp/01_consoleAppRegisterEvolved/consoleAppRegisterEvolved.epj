@@ -16,7 +16,10 @@
          "ecereCOM",
          "stdc++"
       ],
-      "Console" : true
+      "Console" : true,
+      "PrebuildCommands" : [
+         "@$(call echo,gcc $(shell @gcc -dumpversion $(nullerror)))"
+      ]
    },
    "Configurations" : [
       {
@@ -81,7 +84,14 @@
             }
          ]
       },
-      "consoleAppRegisterEvolved.cpp"
+      {
+         "FileName" : "consoleAppRegisterEvolved.cpp",
+         "Options" : {
+            "PrebuildCommands" : [
+               "make --version"
+            ]
+         }
+      }
    ],
    "ResourcesPath" : "",
    "Resources" : [

@@ -4,7 +4,7 @@
    "Options" : {
       "Warnings" : "All",
       "IncludeDirs" : [
-         "$(ECERE_SDK_SRC)/bindings/c"
+         "$(ECERE_SDK_BINDINGS)/c"
       ],
       "TargetType" : "Executable",
       "TargetFileName" : "console",
@@ -28,10 +28,10 @@
    ],
    "Files" : [
       {
-         "Folder" : "bindings",
+         "Folder" : "$(ECERE_SDK_BINDINGS_C)/bindings",
          "Files" : [
-            "$(ECERE_SDK_SRC)/bindings/c/eC.c",
-            "$(ECERE_SDK_SRC)/bindings/c/eC.h"
+            "eC.c",
+            "eC.h"
          ]
       },
       "console.c"
