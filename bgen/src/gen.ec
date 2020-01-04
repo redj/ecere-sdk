@@ -1,5 +1,6 @@
 #include "debug.eh"
 #include "bgen.eh"
+#include "econe.eh"
 
 import "ecere" // must keep this or compilation outside this file will fail
 
@@ -101,12 +102,14 @@ public:
    bool preprocess;
    const String preproLimiter;
    const String linejoinLimiter;
+   Map<const String, const String> cpp_classNameSwaps;
 private:
    MacroMode expansionOrUse;
    //preprocess = true;
    cPrefix = CopyString("");
    virtual bool init()
    {
+      genloc__on = options.genLocs;
       expansionOrUse = options.expandMacros ? expansion : use;
       //PrintLn(lang, ":");
       sym.init(this);
@@ -305,6 +308,7 @@ class GenOptions : struct
 public:
    bool quiet;
    ActionFlag blackList;
+   bool genLocs;
    bool expandMacros;
    bool headerOnly;
    property const String dir
@@ -363,6 +367,7 @@ private:
    {
       if(opt.quiet) quiet = true;
       if(opt.blackList) blackList = opt.blackList;
+      if(opt.genLocs) genLocs = true;
       if(opt.expandMacros) expandMacros = true;
       if(opt.dir && *opt.dir) dir = CopyString(opt.dir);
       if(opt.cpath && *opt.cpath) cpath = CopyString(opt.cpath);
@@ -636,7 +641,7 @@ private:
       return strcmp(this.name, that.name);
    }
 
-   void processDependency(BOutputType from, BOutputType to, BVariant vDep)
+   void processDependency(Gen g, BOutputType from, BOutputType to, BVariant vDep)
    {
       BNamespace nDep = vDep.nspace;
       BNamespace n = nspace;
@@ -651,7 +656,19 @@ private:
          if(dependencies.Find(d))
             delete d;
          else
+         {
+            // if(g.lang == CPlusPlus)
+            //    PrintLn("adding ", vDep.kind, ":", vDep.name, " dependency to ", kind, ":", name);
+            if(g.lang == CPlusPlus && !strcmp(vDep.name, "bool"))
+               Print("");
+            if(g.lang == CPlusPlus && !strcmp(vDep.name, "Window") && !strcmp(name, "Instance"))
+               Print("");
+            if(g.lang == CPlusPlus && !strcmp(vDep.name, name))
+               Print("");
+            if(g.lang == CPlusPlus && !(from == otypedef && to == otypedef))
+               Print("");
             dependencies.Add(d);
+         }
       }
    }
 }
@@ -934,15 +951,17 @@ public:
    }
 };
 
-class OptBits
+//class OptBits
+struct OptBits
 {
-   bool _extern:1;
-   bool _dllimport:1;
-   bool pointer:1;
-   bool anonymous:1;
-   bool notype:1;
-   bool param:1;
-   bool asis:1;
+   bool _extern;//:1;
+   bool _dllimport;//:1;
+   bool pointer;//:1;
+   bool anonymous;//:1;
+   bool notype;//:1;
+   bool param;//:1;
+   bool bare;//:1;       // use bare symbol names. i.e.: Window instead of C(Window)
+   bool cpp;//:1;
 };
 
 struct TypeInfo
@@ -1166,6 +1185,7 @@ class BNamespace : struct
    List<BVariant> contents { };
    Map<BNamespacePtr, AVLTree<BOutputPtr>> dependencies { }; // namespace dependencies with user ouput count
 
+   List<BVariant> splitContents { }; // for cpp
    List<BVariant> implementationsContents { }; // for cpp
 
    property NameSpacePtr
@@ -1473,6 +1493,7 @@ class BClass : struct
    BOutput pyout;
 
    BOutput outImplementation; // for cpp
+   BOutput outSplit; // for cpp
 
    property Class
    {
@@ -1503,6 +1524,7 @@ class BClass : struct
    bool isFromCurrentModule;
    bool is_class;// bool is_Class;
    bool is_struct;
+   bool is_enum;
    bool isBool; bool isByte; bool isUnichar; bool isUnInt; bool isCharPtr; bool isString;
    bool isInstance, isClass, isModule, isApplication, isGuiApplication, isContainer, isArray, isAnchor;
    bool isSurface, isIOChannel, isWindow, isDataBox;
@@ -1519,13 +1541,16 @@ class BClass : struct
    char * symbolName;
    char * baseSymbolName;
    char * py_initializer;
+   const char * cpp_name;
    void init(Class cl, Gen gen, AVLTree<String> allSpecs)
    {
       bool ecere = gen.lib.ecere;
+      MapIterator<const String, const String> iNameSwaps { map = gen.cpp_classNameSwaps };
       this.cl = cl;
       nspace = (NameSpacePtr)cl.nameSpace;
       first = true;
       name = strptrNoNamespace(cl.name);
+      cpp_name = iNameSwaps.Index(name, false) ? iNameSwaps.data : name;
       // skipping these classes here as they are internal native types or base class/struct
       skipTypeDef = skipClassTypeDef.Find(cl.name) != 0;
       // skipping these classes here since they are hardcoded
@@ -1541,6 +1566,7 @@ class BClass : struct
 
       is_class          = cl.type == systemClass   && !strcmp(name, "class");
       is_struct         = cl.type == systemClass   && !strcmp(name, "struct");
+      is_enum           = cl.type == systemClass   && !strcmp(name, "enum");
       isBool            = cl.type == enumClass     && !strcmp(name, "bool");
       isString          = cl.type == normalClass   && !strcmp(name, "String");
       isUnichar         = cl.type == unitClass     && !strcmp(name, "unichar");
@@ -1892,6 +1918,10 @@ class BMethod : struct
       s = PrintString(c.is_class ? "" : c.cname, "_", mname);
       if(!md.dataType)
          ProcessMethodType(md);
+   }
+   bool hasTemplateAnything()
+   {
+      return impossibledebug_bmethod_hasTemplateAnything(this);
    }
    void free() { delete mname;/* delete name;*/ delete m; delete v; delete s; delete n; }
    void OnFree() { free(); };

@@ -1,116 +1,203 @@
+#include "bgen.eh"
+
 import "genCPP"
 
-void cppHardcodedModule(BOutput o)
-{
-   o.z.concatx("   // hardcoded content start", ln,
-               "   static TCPPClass<Module> _class;", ln,
-               "   inline explicit Module(C(Instance) _impl, CPPClass & c = _class) : Instance(_impl, c) { }", ln,
-            // "   MODULE_VIRTUAL_METHODS(Module)", ln,
-            // "   REGISTER() { Module_class_registration(Module); }", ln,
-               "   // end of hardcoded content", ln);
-}
+define cpptemplatePrefix = "T";
+define cpptemplateArgClass = "TC";
+define cpptemplateArgClassObject = "TCO";
+define cpptemplateCPPClassDef = "template <class TC>";
+define cpptemplateNoHeadDef = "template <class TC, C(Class) ** TCO>";
+define cpptemplateNoHeadParams = "<TC, TCO>";
+define cpptemplateTemplateClassDef = "template <class TPT>";
+define cpptemplateTemplateTypeDef = "template <typename TPT>";
 
 void cppHardcodedInstancePart1(BOutput o)
 {
-   o.z.concatx("   // hardcoded content start", ln,
-               "   static TCPPClass<Instance> _class;", ln,
-               "   C(Instance) impl;", ln,
-               "   void (**vTbl)(void);", ln,
-               "", ln,
-               "   void * operator new   (uintsize count) { return eC_new(count); }", ln,
-               "   void * operator new [](uintsize count) { return eC_new(count); }", ln,
-               "   void operator delete   (void * ptr) { eC_delete(ptr); }", ln,
-               "   void operator delete [](void * ptr) { eC_delete(ptr); }", ln,
-               "", ln);
-   o.z.concatx("   static C(bool) constructor(C(Instance) i, C(bool) alloc)", ln,
-               "   {", ln,
-               "      if(alloc &&!_INSTANCE(i, _class.impl))", ln,
-               "         return new Instance(i, _class) != null;", ln,
-               "      return true;", ln,
-               "   }", ln,
-               "   static void destructor(C(Instance) i) { Instance * inst = (Instance *)_INSTANCE(i, _class.impl); delete inst; }", ln,
-               "   static void class_registration(CPPClass & _class);", ln,
-               "", ln);
+   o.z.concatx(genloc__, "   // hardcoded content start", ln,
+               genloc__, "   static TCPPClass<Instance> _class;", ln,
+               genloc__, "   C(Instance) impl;", ln,
+               genloc__, "   void (**vTbl)(void);", ln,
+               genloc__, "   bool mustFree = 0;", ln, ln);
+
+   o.z.concatx(genloc__, "   void * operator new   (uintsize count) { return eC_new(count); }", ln,
+               genloc__, "   void * operator new [](uintsize count) { return eC_new(count); }", ln,
+               genloc__, "   void operator delete   (void * ptr) { eC_delete(ptr); }", ln,
+               genloc__, "   void operator delete [](void * ptr) { eC_delete(ptr); }", ln, ln);
+
+   o.z.concatx(genloc__, "   static C(bool) constructor(C(Instance) i, C(bool) alloc)", ln,
+               genloc__, "   {", ln,
+               genloc__, "      if(alloc && !INSTANCEL(i, _class.impl))", ln,
+               genloc__, "      {", ln);
+   o.z.concatx(genloc__, "         Instance * inst = new Instance(i, _class);", ln,
+               genloc__, "         if(inst)", ln,
+               genloc__, "            inst->mustFree = true;", ln,
+               genloc__, "         return inst != null;", ln);
+   o.z.concatx(genloc__, "      }", ln,
+               genloc__, "      return true;", ln,
+               genloc__, "   }", ln);
+   o.z.concatx(genloc__, "   static void destructor(C(Instance) i)", ln,
+               genloc__, "   {", ln,
+               genloc__, "      Instance * inst = (Instance *)INSTANCEL(i, _class.impl);", ln);
+   o.z.concatx(genloc__, "      if(inst->mustFree)", ln,
+               genloc__, "         delete inst;", ln,
+               genloc__, "   }", ln);
+   o.z.concatx(genloc__, "   static void class_registration(CPPClass & _class);", ln, ln);
 }
 
 void cppHardcodedInstancePart2(BOutput o)
 {
-   o.z.concatx("   inline explicit Instance(C(Instance) _impl, CPPClass & cl = _class)", ln,
-               "   {", ln,
-               "      XClass * c = cl.impl;", ln,
-               "      impl = _impl;", ln,
-               "      vTbl = cl.vTbl;", ln,
-               "      if(impl)", ln,
-               "      {", ln,
-               "         if(c && !_INSTANCE(impl, c))", ln,
-               "            _INSTANCE(impl, c) = this;", ln,
-               "         impl->_refCount++;", ln,
-               "      }", ln,
-               "   }", ln,
-               "   inline Instance()", ln,
-               "   {", ln,
-               "      impl = null;", ln,
-               "      vTbl = null;", ln,
-               "   }", ln);
-   o.z.concatx("   inline ~Instance()", ln,
-               "   {", ln,
-               "      if(impl && impl->_class)", ln,
-               "      {", ln,
-               "         if(impl->_class->bindingsClass)", ln,
-               "         {", ln,
-               "            Instance ** i = (Instance **)&INSTANCEL(impl, impl->_class);", ln,
-               "            if(i && *i == this)", ln,
-               "               *i = null;", ln,
-               "            if(vTbl)", ln,
-               "            {", ln,
-               "               CPPClass * cl = (CPPClass *)impl->_class->bindingsClass;", ln,
-               "               if(cl && vTbl != cl->vTbl)", ln,
-               "               eC_delete(vTbl);", ln,
-               "            }", ln,
-               "         }", ln,
-               "         Instance_decRef(impl);", ln,
-               "      }", ln,
-               "   }", ln);
-   o.z.concatx("   inline Instance(const Instance & i) = delete;", ln,
-               "   inline Instance(const Instance && i)", ln,
-               "   {", ln,
-               "      impl = i.impl;", ln,
-               "      vTbl = i.vTbl;", ln,
-               "   }", ln,
-               "   // end of hardcoded content", ln);
+   o.z.concatx(genloc__, "   inline explicit Instance(C(Instance) _impl, CPPClass & cl = _class)", ln,
+               genloc__, "   {", ln,
+               genloc__, "      XClass * c = cl.impl;", ln,
+               genloc__, "      impl = _impl;", ln,
+               genloc__, "      vTbl = cl.vTbl;", ln);
+   o.z.concatx(genloc__, "      if(impl)", ln,
+               genloc__, "      {", ln,
+               genloc__, "         if(c && BINDINGS_CLASS(impl) && !INSTANCEL(impl, c))", ln,
+               genloc__, "            INSTANCEL(impl, c) = this;", ln,
+               genloc__, "         impl->_refCount++;", ln,
+               genloc__, "      }", ln,
+               genloc__, "   }", ln);
+   o.z.concatx(genloc__, "   inline Instance()", ln,
+               genloc__, "   {", ln,
+               genloc__, "      impl = null;", ln,
+               genloc__, "      vTbl = null;", ln,
+               genloc__, "   }", ln);
+   o.z.concatx(genloc__, "   inline ~Instance()", ln,
+               genloc__, "   {", ln);
+   o.z.concatx(genloc__, "#ifdef _DEBUG", ln,
+               genloc__, "      bool isApp = false;", ln,
+               genloc__, "#endif", ln);
+   o.z.concatx(genloc__, "      if(impl && impl->_class)", ln,
+               genloc__, "      {", ln);
+   o.z.concatx(genloc__, "#ifdef _DEBUG", ln,
+               genloc__, "         isApp = Class_isDerived(impl->_class, eC_findClass(__thisModule, \"Application\"));", ln,
+               genloc__, "#endif", ln);
+   o.z.concatx(genloc__, "         //C(Instance) impl = this->impl;", ln,
+               genloc__, "         //this->impl = null;", ln);
+   o.z.concatx(genloc__, "         if(impl->_class->bindingsClass)", ln,
+               genloc__, "         {", ln,
+               genloc__, "            Instance ** i = (Instance **)&INSTANCEL(impl, impl->_class);", ln,
+               genloc__, "            if(i && *i == this)", ln,
+               genloc__, "               *i = null;", ln);
+   o.z.concatx(genloc__, "            if(vTbl)", ln,
+               genloc__, "            {", ln,
+               genloc__, "               CPPClass * cl = (CPPClass *)impl->_class->bindingsClass;", ln,
+               genloc__, "               if(cl && vTbl != cl->vTbl)", ln);
+   o.z.concatx(genloc__, "                  eC_delete(vTbl);", ln,
+               genloc__, "            }", ln,
+               genloc__, "         }", ln,
+               genloc__, "         Instance_decRef(impl);", ln);
+   o.z.concatx(genloc__, "#ifdef _DEBUG", ln,
+               genloc__, "         if(isApp)", ln,
+               genloc__, "         {", ln,
+               genloc__, "            // printf(\"Is app\\n\");", ln,
+               genloc__, "            // checkMemory();", ln,
+               genloc__, "         }", ln,
+               genloc__, "#endif", ln);
+   o.z.concatx(genloc__, "      }", ln,
+               genloc__, "   }", ln);
+   o.z.concatx(genloc__, "   Instance(const Instance & i) = delete;", ln,
+               genloc__, "   Instance operator= (const Instance & i) = delete;", ln, ln,
+               genloc__, "   inline Instance(Instance && i)", ln);
+   o.z.concatx(genloc__, "   {", ln,
+               genloc__, "      impl = i.impl;", ln,
+               genloc__, "      vTbl = i.vTbl;", ln,
+               genloc__, "      i.impl = null;", ln,
+               genloc__, "      i.vTbl = null;", ln,
+               genloc__, "   }", ln, ln);
+   o.z.concatx(genloc__, "   inline Instance & operator= (Instance && i)", ln,
+               genloc__, "   {", ln,
+               genloc__, "      impl = i.impl;", ln,
+               genloc__, "      vTbl = i.vTbl;", ln,
+               genloc__, "      i.impl = null;", ln,
+               genloc__, "      i.vTbl = null;", ln,
+               genloc__, "      return *this;", ln,
+               genloc__, "   }", ln,
+               genloc__, "   // end of hardcoded content", ln);
 }
 
-void cppTmpDefineVirtualMethod      (CPPGen g, File f, bool prototype)
+void cppHardcodedContainer(BOutput o)
+{
+   o.z.concatx(genloc__, "   TContainer(std::initializer_list<TPT> list) : TContainer()", ln);
+   o.z.concatx(genloc__, "   {", ln);
+   o.z.concatx(genloc__, "      typename std::initializer_list<TPT>::iterator it;", ln);
+   o.z.concatx(genloc__, "      for(it = list.begin(); it != list.end(); ++it)", ln);
+   o.z.concatx(genloc__, "         add(*it);", ln);
+   o.z.concatx(genloc__, "   }", ln, ln);
+
+   o.z.concatx(genloc__, "   TContainer & operator =(std::initializer_list<TPT> list)", ln);
+   o.z.concatx(genloc__, "   {", ln);
+   o.z.concatx(genloc__, "      typename std::initializer_list<TPT>::iterator it;", ln);
+   o.z.concatx(genloc__, "      for(it = list.begin(); it != list.end(); ++it)", ln);
+   o.z.concatx(genloc__, "         add(*it);", ln);
+   o.z.concatx(genloc__, "      return *this;", ln);
+   o.z.concatx(genloc__, "   }", ln, ln);
+
+   o.z.concatx(genloc__, "   inline C(bool) takeOut(TP(Container, D) d);", ln, ln);
+
+   o.z.concatx(genloc__, "   IteratorPointer add(TPT value)", ln);
+   o.z.concatx(genloc__, "   {", ln);
+   o.z.concatx(genloc__, "      return IteratorPointer(Container_add(impl, toTA<TPT>(value)));", ln);
+   o.z.concatx(genloc__, "   }", ln);
+}
+
+void cppHardcodedArray(BOutput o)
+{
+   o.z.concatx(ln);
+   o.z.concatx(genloc__, "   TArray<TPT> (std::initializer_list<TPT> list) : TArray<TPT> ()", ln);
+   o.z.concatx(genloc__, "   {", ln);
+   o.z.concatx(genloc__, "      typename std::initializer_list<TPT>::iterator it;", ln);
+   o.z.concatx(genloc__, "      for(it = list.begin(); it != list.end(); ++it)", ln);
+   o.z.concatx(genloc__, "         this->add(*it);", ln);
+   o.z.concatx(genloc__, "   }", ln, ln);
+
+   o.z.concatx(genloc__, "   TArray<TPT> & operator =(std::initializer_list<TPT> list)", ln);
+   o.z.concatx(genloc__, "   {", ln);
+   o.z.concatx(genloc__, "      typename std::initializer_list<TPT>::iterator it;", ln);
+   o.z.concatx(genloc__, "      for(it = list.begin(); it != list.end(); ++it)", ln);
+   o.z.concatx(genloc__, "         this->add(*it);", ln);
+   o.z.concatx(genloc__, "      return *this;", ln);
+   o.z.concatx(genloc__, "   }", ln);
+}
+
+void cppTmpDefineVirtualMethod      (CPPGen g, File f, bool prototype, bool template)
 {
    ZString z { allocType = heap };
-   cppMacroVirtualMethod(g, z, definition, prototype, 0, "n", "ncpp", "c", "b", "r", "p0", "ep", "p", "d", 0);
+   cppMacroVirtualMethod(g, z, definition, prototype, template, 0, "n", "ncpp", "c", "t", "b", "r", "p0", "ep", "p", "d", 0);
    f.Puts(z._string);
    delete z;
    f.Print(ln);
 }
-void cppTmpDefineIntRegisterMethod  (CPPGen g, File f) { ZString z { allocType = heap }; cppDefineMacroIntRegisterMethod  (g, z, 0, 0); f.Puts(z._string); delete z; }
-void cppTmpDefineRegisterMethod     (CPPGen g, File f)
+void cppTmpDefineIntRegisterMethod  (CPPGen g, File f, bool template)
 {
    ZString z { allocType = heap };
-   cppMacroRegisterMethod(g, z, definition, 0, "ns", "n", "bc", "c", "r", "p", "ocl", "oi", "code", "ea", "rv", 0);
+   cppDefineMacroIntRegisterMethod(g, z, template, 0, 0);
+   f.Puts(z._string); delete z;
+}
+void cppTmpDefineRegisterMethod     (CPPGen g, File f, bool template)
+{
+   ZString z { allocType = heap };
+   cppMacroRegisterMethod(g, z, definition, template, 0, "ns", "n", "bc", "c", "t", "r", "p", "ocl", "oi", "code", "ea", "rv", 0);
    f.Puts(z._string);
    delete z;
    f.Print(ln);
 }
-void cppTmpDefineRegisterTypedMethod(CPPGen g, File f) { ZString z { allocType = heap }; cppDefineMacroRegisterTypedMethod(g, z, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
-void cppTmpDefineIntRegisterClass   (CPPGen g, File f) { ZString z { allocType = heap }; cppDefineMacroIntRegisterClass   (g, z, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
-void cppTmpDefineRegisterClassDef   (CPPGen g, File f) { ZString z { allocType = heap }; cppDefineMacroRegisterClassDef   (g, z, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
-void cppTmpDefineClassDef           (CPPGen g, File f) { ZString z { allocType = heap }; cppDefineMacroClassDef           (g, z, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
-void cppTmpDefineRegisterClass      (CPPGen g, File f) { ZString z { allocType = heap }; cppDefineMacroRegisterClass      (g, z, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
-void cppTmpDefineRegisterClassCPP   (CPPGen g, File f) { ZString z { allocType = heap }; cppDefineMacroRegisterClassCPP   (g, z, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
-void cppTmpDefineIntConstructClass  (CPPGen g, File f) { ZString z { allocType = heap }; cppDefineMacroIntConstructClass  (g, z, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
-void cppTmpDefineConstructClass     (CPPGen g, File f) { ZString z { allocType = heap }; cppDefineMacroConstructClass     (g, z, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
-void cppTmpDefineDestructClass      (CPPGen g, File f) { ZString z { allocType = heap }; cppDefineMacroDestructClass      (g, z, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
-void cppTmpDefineClassRegistration  (CPPGen g, File f) { ZString z { allocType = heap }; cppDefineMacroClassRegister      (g, z, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
-void cppTmpDefineProperty           (CPPGen g, File f, bool protoOrImpl) { ZString z { allocType = heap }; cppDefineMacroProperty   (g, z, 0, protoOrImpl, 0); f.Puts(z._string); delete z; f.Print(ln); }
-void cppTmpDefineIntPropSet         (CPPGen g, File f, bool protoOrImpl) { ZString z { allocType = heap }; cppDefineMacroIntPropSet (g, z, 0, protoOrImpl, 0); f.Puts(z._string); delete z; f.Print(ln); }
-void cppTmpDefinePropSet            (CPPGen g, File f, bool protoOrImpl) { ZString z { allocType = heap }; cppDefineMacroPropSet    (g, z, 0, protoOrImpl, 0); f.Puts(z._string); delete z; f.Print(ln); }
-void cppTmpDefinePropGet            (CPPGen g, File f, bool protoOrImpl) { ZString z { allocType = heap }; cppDefineMacroPropGet    (g, z, 0, protoOrImpl, 0); f.Puts(z._string); delete z; f.Print(ln); }
+void cppTmpDefineRegisterTypedMethod   (CPPGen g, File f, bool template) { ZString z { allocType = heap }; cppDefineMacroRegisterTypedMethod(g, z, template, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
+void cppTmpDefineIntRegisterClass      (CPPGen g, File f) { ZString z { allocType = heap }; cppDefineMacroIntRegisterClass   (g, z, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
+void cppTmpDefineRegisterClassDef      (CPPGen g, File f) { ZString z { allocType = heap }; cppDefineMacroRegisterClassDef   (g, z, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
+void cppTmpDefineClassDef              (CPPGen g, File f) { ZString z { allocType = heap }; cppDefineMacroClassDef           (g, z, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
+void cppTmpDefineRegisterClass         (CPPGen g, File f) { ZString z { allocType = heap }; cppDefineMacroRegisterClass      (g, z, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
+void cppTmpDefineRegisterClassCPP      (CPPGen g, File f) { ZString z { allocType = heap }; cppDefineMacroRegisterClassCPP   (g, z, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
+void cppTmpDefineIntConstructClass     (CPPGen g, File f) { ZString z { allocType = heap }; cppDefineMacroIntConstructClass  (g, z, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
+void cppTmpDefineMacroMoveConstructors (CPPGen g, File f) { ZString z { allocType = heap }; cppDefineMacroMoveConstructors   (g, z, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
+void cppTmpDefineConstructClass        (CPPGen g, File f, bool template) { ZString z { allocType = heap }; cppDefineMacroConstructClass     (g, z, template, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
+void cppTmpDefineDestructClass         (CPPGen g, File f) { ZString z { allocType = heap }; cppDefineMacroDestructClass      (g, z, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
+void cppTmpDefineClassRegistration     (CPPGen g, File f) { ZString z { allocType = heap }; cppDefineMacroClassRegister      (g, z, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
+void cppTmpDefineProperty              (CPPGen g, File f, PropertyMacroBits opts) { ZString z { allocType = heap }; cppDefineMacroProperty   (g, z, opts, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
+void cppTmpDefineIntPropSet            (CPPGen g, File f, PropertyMacroBits opts) { ZString z { allocType = heap }; cppDefineMacroIntPropSet (g, z, opts, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
+void cppTmpDefinePropSet               (CPPGen g, File f, PropertyMacroBits opts) { ZString z { allocType = heap }; cppDefineMacroPropSet    (g, z, opts, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
+void cppTmpDefinePropGet               (CPPGen g, File f, PropertyMacroBits opts) { ZString z { allocType = heap }; cppDefineMacroPropGet    (g, z, opts, 0, 0); f.Puts(z._string); delete z; f.Print(ln); }
 
 void printZedStringToFile(File f, ZString z)
 {
@@ -118,27 +205,22 @@ void printZedStringToFile(File f, ZString z)
    z.copy("");
 }
 
-void cppHardcodedCore(CPPGen g, File f)
+void cppHardcodedCorePart1(CPPGen g, File f)
 {
-   ZString z { allocType = heap };
+   f.PrintLn(genloc__, "#include <initializer_list>");
+   f.PrintLn(genloc__, "#include <tuple>", ln);
 
-   f.PrintLn("// Syntactic Sugar (NOT GENERATED)");
-   f.PrintLn("// INSTANCEL: what?");
-   f.PrintLn("//            x: pointer to eC instance");
-   f.PrintLn("//            c: eC 'Class' object representing the C++ class");
-   f.PrintLn("#define INSTANCEL(x, c) (*(void **)((char *)(x) + (c)->offset))");
-   f.PrintLn("#define _INSTANCE(x, c) ((x) ? INSTANCEL(x, c) : (c *)0)", ln);
+   f.PrintLn(genloc__, "// Syntactic Sugar (NOT GENERATED)", ln);
+   f.PrintLn(genloc__, "// INSTANCEL, INSTANCE: get the C++ instance out of supplied eC instance");
+   f.PrintLn(genloc__, "//            x: pointer to eC instance");
+   f.PrintLn(genloc__, "//            c: eC 'Class' object representing the C++ class");
+   f.PrintLn(genloc__, "#define INSTANCEL(x, c) (*(void **)((char *)(x) + (c)->offset))   // For when an l-value is needed");
+   f.PrintLn(genloc__, "#define INSTANCE(x, c)  ((x) ? INSTANCEL(x, c) : 0)               // Regular one that can return null", ln);
 
-   f.PrintLn("// INSTANCE: returns a C++ instance out for supplied eC instance");
-   f.PrintLn("//           x: pointer to eC instance");
-   f.PrintLn("//           c: what is c");
-   f.PrintLn("#define INSTANCE(x, c) ({c * _i = (c *)_INSTANCE(x, x->_class); _i ? *_i : c(x); })", ln);
+   f.PrintLn(genloc__, "#define BINDINGS_CLASS(eo) (eo && eo->_class && eo->_class->bindingsClass)", ln);
 
-   f.PrintLn("#define POBJ(c, ho, eo) \\");
-   f.PrintLn("      CPPInstanceHolder<c> ho(eo && eo->_class && eo->_class->bindingsClass ? *(c *)INSTANCEL(eo, eo->_class) : *new c(eo));", ln);
-
-   f.PrintLn("#undef   newi");
-   f.PrintLn("#define  newi(c) Instance_newEx(c, true)", ln);
+   f.PrintLn(genloc__, "#undef   newi");
+   f.PrintLn(genloc__, "#define  newi(c) Instance_newEx(c, true)", ln);
 
    cppTmpDefineIntRegisterClass(g, f);
    cppTmpDefineRegisterClassDef(g, f);
@@ -146,155 +228,321 @@ void cppHardcodedCore(CPPGen g, File f)
    cppTmpDefineRegisterClass(g, f);
    cppTmpDefineRegisterClassCPP(g, f);
 
-   f.PrintLn("#define EVOLVE_APP(ac, a) \\");
-   f.PrintLn("   Instance_evolve(&(a).impl, ac::_class.impl); \\");
-   f.PrintLn("   _INSTANCE((a).impl, (a).impl->_class) = &(a); \\");
-   f.PrintLn("   __thisModule = (a).impl; \\");
-   f.PrintLn("   (a).vTbl = _class.vTbl;", ln);
+   f.PrintLn(genloc__, "#define EVOLVE_APP(ac, a) \\");
+   f.PrintLn(genloc__, "   Instance_evolve(&(a).impl, ac::_class.impl); \\");
+   f.PrintLn(genloc__, "   INSTANCEL((a).impl, (a).impl->_class) = &(a); \\");
+   f.PrintLn(genloc__, "   __thisModule = (a).impl; \\");
+   f.PrintLn(genloc__, "   (a).vTbl = _class.vTbl;", ln);
 
-   f.PrintLn("#define REGISTER_APP_CLASS(ac, b, a) \\");
-   f.PrintLn("   REGISTER_CLASS(ac, b, a); \\");
-   f.PrintLn("   EVOLVE_APP(ac, a)", ln);
+   f.PrintLn(genloc__, "#define REGISTER_APP_CLASS(ac, b, a) \\");
+   f.PrintLn(genloc__, "   REGISTER_CLASS(ac, b, a); \\");
+   f.PrintLn(genloc__, "   EVOLVE_APP(ac, a)", ln);
 
    cppTmpDefineIntConstructClass(g, f);
-   cppTmpDefineConstructClass(g, f);
+   cppTmpDefineMacroMoveConstructors(g, f);
+   cppTmpDefineConstructClass(g, f, false);
+   cppTmpDefineConstructClass(g, f, true);
    cppTmpDefineDestructClass(g, f);
    cppTmpDefineClassRegistration(g, f);
 
-   f.PrintLn("#if !defined(__LINK_ECERE__)");
-   f.PrintLn("#define __LINK_ECERE__ 1");
-   f.PrintLn("#endif", ln);
+   f.PrintLn(genloc__, "#if !defined(__LINK_ECERE__)");
+   f.PrintLn(genloc__, "#define __LINK_ECERE__ 1");
+   f.PrintLn(genloc__, "#endif", ln);
 
-   f.PrintLn("#define APP_CONSTRUCT(c, b) \\");
-   f.PrintLn("   inline c() : c(eC_init_CALL(__LINK_ECERE__)) { } \\");
-   f.PrintLn("   _CONSTRUCT(c, b)", ln);
+   f.PrintLn(genloc__, "#define APP_CONSTRUCT(c, b) \\");
+   f.PrintLn(genloc__, "   inline c() : c(eC_init_CALL(__LINK_ECERE__)) { } \\");
+   f.PrintLn(genloc__, "   _CONSTRUCT(c, b)", ln);
 
-   f.PrintLn("#if !defined(__WIN32__) || defined(__CONSOLE_APP__)");
-   f.PrintLn("   #define APP_SET_ARGS(a) eC_setArgs(a.impl, argc, argv);");
-   f.PrintLn("#else");
-   f.PrintLn("   #define APP_SET_ARGS(a)");
-   f.PrintLn("#endif", ln);
+   f.PrintLn(genloc__, "#if !defined(__WIN32__) || defined(__CONSOLE_APP__)");
+   f.PrintLn(genloc__, "   #define APP_SET_ARGS(a) eC_setArgs(a.impl, argc, argv);");
+   f.PrintLn(genloc__, "#else");
+   f.PrintLn(genloc__, "   #define APP_SET_ARGS(a)");
+   f.PrintLn(genloc__, "#endif", ln);
 
-   f.PrintLn("#define MAIN_DEFINITION \\");
-   f.PrintLn("   extern \"C\" MAIN_DECLARATION \\");
-   f.PrintLn("   { \\");
-   f.PrintLn("      APP_SET_ARGS(app); \\");
-   f.PrintLn("      app.main(); \\");
-   f.PrintLn("      unloadTranslatedStrings(MODULE_NAME); \\");
-   f.PrintLn("      return app.exitCode; \\");
-   f.PrintLn("   }", ln);
+   f.PrintLn(genloc__, "#define MAIN_DEFINITION \\");
+   f.PrintLn(genloc__, "   extern \"C\" MAIN_DECLARATION \\");
+   f.PrintLn(genloc__, "   { \\");
+   f.PrintLn(genloc__, "      APP_SET_ARGS(app); \\");
+   f.PrintLn(genloc__, "      app.main(); \\");
+   f.PrintLn(genloc__, "      unloadTranslatedStrings(MODULE_NAME); \\");
+   f.PrintLn(genloc__, "      return app.exitCode; \\");
+   f.PrintLn(genloc__, "   }", ln);
 
-   f.PrintLn("// SELF: get C++ class instance pointer from within hackish member of the class", ln);
-   f.PrintLn("#define SELF(c, n)  __attribute__((unused)) c * self = ((c *)(((char *)this) + 0x10 - (char *)&((c *)0x10)->n))", ln);
+   f.PrintLn(genloc__, "// SELF: get C++ class instance pointer from within hackish member of the class");
+   f.PrintLn(genloc__, "#define CONTAINER_OF(ptr, type, member) ((type *)(((char *)ptr) + 0x10 - (char *)&((type *)0x10)->member))");
+   f.PrintLn(genloc__, "#define SELF(c, member)  __attribute__((unused)) c * self = CONTAINER_OF(this, c, member);");
 
-   cppTmpDefineVirtualMethod(g, f, true);
-   cppTmpDefineVirtualMethod(g, f, false);
-   cppTmpDefineIntRegisterMethod(g, f);
-   cppTmpDefineRegisterMethod(g, f);
-   cppTmpDefineRegisterTypedMethod(g, f);
-   cppTmpDefineProperty(g, f, true);
-   cppTmpDefineIntPropSet(g, f, true);
-   cppTmpDefinePropSet(g, f, true);
-   cppTmpDefinePropGet(g, f, true);
-   cppTmpDefineProperty(g, f, false);
-   cppTmpDefineIntPropSet(g, f, false);
-   cppTmpDefinePropSet(g, f, false);
-   cppTmpDefinePropGet(g, f, false);
+   f.PrintLn(genloc__, "#define getimpli(i)  ((Instance)i).impl", ln);
 
-   f.PrintLn("extern \"C\" ", g_.sym.module, " ecere_init(", g_.sym.module, " fromModule);");
-   f.PrintLn("");
-   f.PrintLn("class XClass : public ", g_.sym.__class, " { };");
-   f.PrintLn("");
-   f.PrintLn("class CPPClass");
-   f.PrintLn("{");
-   f.PrintLn("public:");
-   f.PrintLn("   typedef void (* Function)(void);");
-   f.PrintLn("   XClass * impl;");
-   f.PrintLn("   Function * vTbl;");
-   f.PrintLn("   inline CPPClass() { };");
-   f.PrintLn("   inline CPPClass(const CPPClass & c) = delete;");
-   f.PrintLn("   inline CPPClass(const CPPClass && c)");
-   f.PrintLn("   {");
-   f.PrintLn("      impl = c.impl;");
-   f.PrintLn("      vTbl = c.vTbl;");
-   f.PrintLn("   }");
-   f.PrintLn("};");
-   f.PrintLn("");
-   f.PrintLn("template <class T>");
-   f.PrintLn("class TCPPClass : public CPPClass");
-   f.PrintLn("{");
-   f.PrintLn("public:");
-   f.PrintLn("   TCPPClass() { }");
-   f.PrintLn("   TCPPClass(XClass * _impl)");
-   f.PrintLn("   {");
-   f.PrintLn("      setup(_impl);");
-   f.PrintLn("   }");
-   f.PrintLn("   void (*destructor)(T &);");
-   f.PrintLn("   void setup(XClass * _impl)");
-   f.PrintLn("   {");
-   f.PrintLn("      impl = _impl;");
-   f.PrintLn("      if(impl)");
-   f.PrintLn("      {");
-   f.PrintLn("         _impl->bindingsClass = this;");
-   f.PrintLn("         if(vTbl) eC_delete(vTbl);");
-   f.PrintLn("         vTbl = newt(Function, impl->vTblSize);");
-   f.PrintLn("         memset(vTbl, 0, sizeof(Function) * impl->vTblSize);");
-   f.PrintLn("         T::class_registration(*this);");
-   f.PrintLn("      }");
-   f.PrintLn("   }");
-   f.PrintLn("   ~TCPPClass()");
-   f.PrintLn("   {");
-   f.PrintLn("      if(impl)");
-   f.PrintLn("         eC_delete(vTbl);");
-   f.PrintLn("   }");
-   f.PrintLn("};", ln);
+   cppTmpDefineVirtualMethod(g, f, true, false);
+   cppTmpDefineVirtualMethod(g, f, false, false);
 
-   f.PrintLn("template <class T, C(Class) ** M>");
-   f.PrintLn("class TNHInstance");
-   f.PrintLn("{");
-   f.PrintLn("public:");
-   f.PrintLn("   T * impl;");
-   f.PrintLn("   TNHInstance() { impl = (T*)Instance_new(*M); }");
-   f.PrintLn("   TNHInstance(T * _impl) { impl = _impl; }");
-   f.PrintLn("};", ln);
+   cppTmpDefineVirtualMethod(g, f, true, true);
+   cppTmpDefineVirtualMethod(g, f, false, true);
 
-   f.PrintLn("template <class T>");
-   f.PrintLn("class CPPInstanceHolder");
-   f.PrintLn("{");
-   f.PrintLn("public:");
-   f.PrintLn("   T * object;");
-   f.PrintLn("   CPPInstanceHolder(T & o) : object(&o)");
-   f.PrintLn("   {");
-   f.PrintLn("      if(object->impl)");
-   f.PrintLn("         o.impl->_refCount++;");
-   f.PrintLn("   }");
-   f.PrintLn("");
-   f.PrintLn("   CPPInstanceHolder(const CPPInstanceHolder & h) : object(h.object)");
-   f.PrintLn("   {");
-   f.PrintLn("      if(object->impl)");
-   f.PrintLn("         object->impl->_refCount++;");
-   f.PrintLn("   }");
-   f.PrintLn("");
-   f.PrintLn("   CPPInstanceHolder & operator =(const CPPInstanceHolder & h)");
-   f.PrintLn("   {");
-   f.PrintLn("      if(object->impl)");
-   f.PrintLn("         Instance_delete(object->impl);");
-   f.PrintLn("");
-   f.PrintLn("      object = h.object;");
-   f.PrintLn("      if(object->impl)");
-   f.PrintLn("         object->impl->_refCount++;");
-   f.PrintLn("      return *this;");
-   f.PrintLn("   }");
-   f.PrintLn("");
-   f.PrintLn("   ~CPPInstanceHolder()");
-   f.PrintLn("   {");
-   f.PrintLn("      if(object->impl)");
-   f.PrintLn("         Instance_delete(object->impl);");
-   f.PrintLn("   }");
-   f.PrintLn("");
-   f.PrintLn("   T& operator*() const { return *object; }");
-   f.PrintLn("   T* operator->() const { return object; }");
-   f.PrintLn("};", ln);
+   cppTmpDefineIntRegisterMethod(g, f, false);
+   cppTmpDefineRegisterMethod(g, f, false);
+   cppTmpDefineRegisterTypedMethod(g, f, false);
 
-   delete z;
+   cppTmpDefineIntRegisterMethod(g, f, true);
+   cppTmpDefineRegisterMethod(g, f, true);
+   cppTmpDefineRegisterTypedMethod(g, f, true);
+
+   f.PrintLn(genloc__, "template<typename T, typename U> struct is_same       { static const bool value = false; };");
+   f.PrintLn(genloc__, "template<typename T>             struct is_same<T, T> { static const bool value = true; };");
+   f.PrintLn(genloc__, "template<typename T, typename U> bool eqTypes()       { return is_same<T, U>::value; }", ln);
+
+   f.PrintLn(genloc__, "template<typename TTT> inline uint64 toTA(TTT x) { C(DataValue) p = { }; p.p = x; return p.ui64; }");
+   f.PrintLn(genloc__, "template<> inline uint64 toTA(double x) { C(DataValue) p = { }; p.d = x; return p.ui64; }");
+   f.PrintLn(genloc__, "template<> inline uint64 toTA(float x)  { C(DataValue) p = { }; p.f = x; return p.ui64; }");
+   f.PrintLn(genloc__, "template<> inline uint64 toTA(int x)    { C(DataValue) p = { }; p.i = x; return p.ui64; }", ln);
+
+   f.PrintLn(genloc__, "template<typename T> struct is_const          { static const bool value = false; };");
+   f.PrintLn(genloc__, "template<typename T> struct is_const<const T> { static const bool value = true; };");
+   f.PrintLn(genloc__, "template<typename T> bool isConst()       { return is_const<T>::value; }", ln);
+
+   f.PrintLn(genloc__, "template <typename T> struct TypeName");
+   f.PrintLn(genloc__, "{");
+   f.PrintLn(genloc__, "   static const char* get() { return \"int\"; }");
+   f.PrintLn(genloc__, "};", ln);
+
+   f.PrintLn(genloc__, "template <> struct TypeName<int> { static const char* get() { return \"int\"; } };");
+   f.PrintLn(genloc__, "template <> struct TypeName<double> { static const char* get() { return \"double\"; } };", ln);
+
+   f.PrintLn(genloc__, "#define REGVMETHOD(b, n, m, p, t, a) \\");
+   f.PrintLn(genloc__, "    if(!eqTypes<decltype(&m), decltype(&b::n)>()) \\");
+   f.PrintLn(genloc__, "       ((b::b ## _ ## n ## _Functor::FunctionType *)_class.vTbl)[M_VTBLID(b, n)] = +[]p { return ((t &)self).m a; };", ln);
+
+   cppTmpDefineProperty(g, f, { true });
+   cppTmpDefineIntPropSet(g, f, { true });
+   cppTmpDefinePropSet(g, f, { true });
+   cppTmpDefinePropGet(g, f, { true });
+
+   cppTmpDefineProperty(g, f, { false });
+
+   cppTmpDefineIntPropSet(g, f, { false });
+   cppTmpDefinePropSet(g, f, { false });
+   cppTmpDefinePropGet(g, f, { false });
+
+   cppTmpDefineIntPropSet(g, f, { false, nohead });
+   cppTmpDefinePropSet(g, f, { false, nohead });
+   f.PrintLn(genloc__, "#define TCTCO  <TC, TCO>", ln);
+   cppTmpDefinePropGet(g, f, { false, nohead });
+
+   cppTmpDefinePropSet(g, f, { true, template });
+
+   cppTmpDefineIntPropSet(g, f, { false, template });
+   cppTmpDefinePropSet(g, f, { false, template });
+   cppTmpDefinePropGet(g, f, { false, template });
 }
+
+void cppHardcodedCorePart2(CPPGen g, File f)
+{
+   f.PrintLn(genloc__, "extern \"C\" ", g_.sym.module, " ecere_init(", g_.sym.module, " fromModule);", ln);
+
+   f.PrintLn(genloc__, "class XClass : public ", g_.sym.__class, " { };", ln);
+   f.PrintLn(genloc__, "static int cppClassCount;", ln);
+
+   f.PrintLn(genloc__, "class CPPClass");
+   f.PrintLn(genloc__, "{");
+   f.PrintLn(genloc__, "public:");
+   f.PrintLn(genloc__, "   void * operator new   (uintsize count) { return eC_new(count); }");
+   f.PrintLn(genloc__, "   void * operator new [](uintsize count) { return eC_new(count); }");
+   f.PrintLn(genloc__, "   void operator delete   (void * ptr) { eC_delete(ptr); }");
+   f.PrintLn(genloc__, "   void operator delete [](void * ptr) { eC_delete(ptr); }", ln);
+
+   f.PrintLn(genloc__, "   typedef void (* Function)(void);");
+   f.PrintLn(genloc__, "   XClass * impl;");
+   f.PrintLn(genloc__, "   Function * vTbl;");
+   f.PrintLn(genloc__, "   char * name;");
+   f.PrintLn(genloc__, "   inline CPPClass() { cppClassCount++; };");
+   f.PrintLn(genloc__, "   inline CPPClass(const CPPClass & c) = delete;");
+   f.PrintLn(genloc__, "   inline CPPClass(CPPClass && c)");
+   f.PrintLn(genloc__, "   {");
+   f.PrintLn(genloc__, "      name = c.name;");
+   f.PrintLn(genloc__, "      impl = c.impl;");
+   f.PrintLn(genloc__, "      vTbl = c.vTbl;");
+   f.PrintLn(genloc__, "      c.name = null;");
+   f.PrintLn(genloc__, "      c.impl = null;");
+   f.PrintLn(genloc__, "      c.vTbl = null;");
+   f.PrintLn(genloc__, "   }");
+   f.PrintLn(genloc__, "   ~CPPClass()");
+   f.PrintLn(genloc__, "   {");
+   f.PrintLn(genloc__, "      if(!--cppClassCount)");
+   f.PrintLn(genloc__, "      {");
+   f.PrintLn(genloc__, "         //printf(\"No more classes\\n\");");
+   f.PrintLn(genloc__, "         checkMemory();");
+   f.PrintLn(genloc__, "      }");
+   f.PrintLn(genloc__, "   }");
+   f.PrintLn(genloc__, "};", ln);
+
+   f.PrintLn(genloc__, cpptemplateCPPClassDef);
+   f.PrintLn(genloc__, "class TCPPClass : public CPPClass");
+   f.PrintLn(genloc__, "{");
+   f.PrintLn(genloc__, "public:");
+   f.PrintLn(genloc__, "   TCPPClass() { }");
+   f.PrintLn(genloc__, "   TCPPClass(XClass * _impl)");
+   f.PrintLn(genloc__, "   {");
+   f.PrintLn(genloc__, "      setup(_impl);");
+   f.PrintLn(genloc__, "   }");
+   f.PrintLn(genloc__, "   void (*destructor)(TC &);");
+   f.PrintLn(genloc__, "   void setup(XClass * _impl)");
+   f.PrintLn(genloc__, "   {");
+   f.PrintLn(genloc__, "      eC_delete(name);");
+   f.PrintLn(genloc__, "      impl = _impl;");
+   f.PrintLn(genloc__, "      if(impl)");
+   f.PrintLn(genloc__, "      {");
+   f.PrintLn(genloc__, "         name = copyString(impl->name);");
+   f.PrintLn(genloc__, "         _impl->bindingsClass = this;");
+   f.PrintLn(genloc__, "         if(vTbl)");
+   f.PrintLn(genloc__, "            eC_delete(vTbl);");
+   f.PrintLn(genloc__, "         vTbl = newt(Function, impl->vTblSize);");
+   f.PrintLn(genloc__, "         memset(vTbl, 0, sizeof(Function) * impl->vTblSize);");
+   f.PrintLn(genloc__, "         // printf(\"setting up %s\\n\", impl->name);"); // todo: remove debug printing?
+   f.PrintLn(genloc__, "         TC::class_registration(*this);");
+   f.PrintLn(genloc__, "      }");
+   f.PrintLn(genloc__, "   }");
+   f.PrintLn(genloc__, "   ~TCPPClass()");
+   f.PrintLn(genloc__, "   {");
+   f.PrintLn(genloc__, "      if(impl)");
+   f.PrintLn(genloc__, "         eC_delete(vTbl);");
+   f.PrintLn(genloc__, "      eC_delete(name);");
+   f.PrintLn(genloc__, "   }");
+   f.PrintLn(genloc__, "};", ln);
+
+   f.PrintLn(genloc__, "template<typename TPT> inline CPPClass & ensureTemplatized(CPPClass & _class, const char * name)");
+   f.PrintLn(genloc__, "{");
+   f.PrintLn(genloc__, "   if(!_class.impl || !_class.impl->templateClass)");
+   f.PrintLn(genloc__, "   {");
+   f.PrintLn(genloc__, "      char type[1024];");
+   f.PrintLn(genloc__, "      strcpy(type, \"CPP\");");
+   f.PrintLn(genloc__, "      strcat(type, name);");
+   f.PrintLn(genloc__, "      strcat(type, \"<\");");
+   f.PrintLn(genloc__, "      {");
+   f.PrintLn(genloc__, "         const char * t1 = TypeName<TPT>::get();");
+   f.PrintLn(genloc__, "         if(isConst<TPT>()) strcat(type, \"const \");");
+   f.PrintLn(genloc__, "         strcat(type, t1);");
+   f.PrintLn(genloc__, "      }");
+   f.PrintLn(genloc__, "      strcat(type, \">\");");
+   f.PrintLn(genloc__, "      // printf(\"Instantiating %s\\n\", type);");
+   f.PrintLn(genloc__, "      _class.impl = (XClass *)eC_findClass(__thisModule, type);");
+   f.PrintLn(genloc__, "      if(_class.impl) _class.impl->bindingsClass = &_class;");
+   f.PrintLn(genloc__, "   }");
+   f.PrintLn(genloc__, "   return _class;");
+   f.PrintLn(genloc__, "}", ln);
+
+   f.PrintLn(genloc__, cpptemplateNoHeadDef);
+   f.PrintLn(genloc__, "class TNHInstance");
+   f.PrintLn(genloc__, "{");
+   f.PrintLn(genloc__, "public:");
+   f.PrintLn(genloc__, "   void * operator new   (uintsize count) { return eC_new(count); }");
+   f.PrintLn(genloc__, "   void * operator new [](uintsize count) { return eC_new(count); }");
+   f.PrintLn(genloc__, "   void operator delete   (void * ptr) { eC_delete(ptr); }");
+   f.PrintLn(genloc__, "   void operator delete [](void * ptr) { eC_delete(ptr); }");
+   f.PrintLn(genloc__, "   TC * impl;");
+   f.PrintLn(genloc__, "   TNHInstance() { impl = (TC*)Instance_new(*TCO); }");
+   f.PrintLn(genloc__, "   TNHInstance(TC * _impl) { impl = _impl; }");
+   f.PrintLn(genloc__, "   ~TNHInstance()");
+   f.PrintLn(genloc__, "   {");
+   f.PrintLn(genloc__, "      eC_delete(impl);");
+   f.PrintLn(genloc__, "   }");
+   f.PrintLn(genloc__, "};", ln);
+
+   // TIH: Template Instance Holder
+   f.PrintLn(genloc__, cpptemplateCPPClassDef);
+   f.PrintLn(genloc__, "class TIH");
+   f.PrintLn(genloc__, "{");
+   f.PrintLn(genloc__, "public:");
+   f.PrintLn(genloc__, "   void * operator new   (uintsize count) { return eC_new(count); }");
+   f.PrintLn(genloc__, "   void * operator new [](uintsize count) { return eC_new(count); }");
+   f.PrintLn(genloc__, "   void operator delete   (void * ptr) { eC_delete(ptr); }");
+   f.PrintLn(genloc__, "   void operator delete [](void * ptr) { eC_delete(ptr); }");
+   f.PrintLn(genloc__, "   TC * object;", ln);
+
+   f.PrintLn(genloc__, "   TIH(C(Instance) eo) : TIH(*(BINDINGS_CLASS(eo) ? (TC *)INSTANCE(eo, eo->_class) : new TC(eo)))");
+   f.PrintLn(genloc__, "   {");
+   f.PrintLn(genloc__, "      if(!BINDINGS_CLASS(eo) || !INSTANCE(eo, eo->_class))");
+   f.PrintLn(genloc__, "      {");
+   f.PrintLn(genloc__, "         object->mustFree = true;");
+   f.PrintLn(genloc__, "      }");
+   f.PrintLn(genloc__, "      else");
+   f.PrintLn(genloc__, "      {");
+   f.PrintLn(genloc__, "         INSTANCEL(eo, eo->_class) = object;");
+   f.PrintLn(genloc__, "      }");
+   f.PrintLn(genloc__, "   }");
+   f.PrintLn(genloc__, "   TIH(TC & o) : object(&o)");
+   f.PrintLn(genloc__, "   {");
+   f.PrintLn(genloc__, "   // if(o.impl)");
+   f.PrintLn(genloc__, "   //    o.impl->_refCount++;");
+   f.PrintLn(genloc__, "   }", ln);
+
+   f.PrintLn(genloc__, "   TIH(const TIH & h) : object(h.object)");
+   f.PrintLn(genloc__, "   {");
+   f.PrintLn(genloc__, "      if(object && object->impl)");
+   f.PrintLn(genloc__, "         object->impl->_refCount++;");
+   f.PrintLn(genloc__, "   }", ln);
+
+   f.PrintLn(genloc__, "   TIH & operator= (const TIH & h)");
+   f.PrintLn(genloc__, "   {");
+   f.PrintLn(genloc__, "      if(object && object->impl)");
+   f.PrintLn(genloc__, "         deletei(object->impl);", ln);
+
+   f.PrintLn(genloc__, "      object = h.object;");
+   f.PrintLn(genloc__, "      if(object && object->impl)");
+   f.PrintLn(genloc__, "         object->impl->_refCount++;");
+   f.PrintLn(genloc__, "      return *this;");
+   f.PrintLn(genloc__, "   }", ln);
+
+   f.PrintLn(genloc__, "   ~TIH()");
+   f.PrintLn(genloc__, "   {");
+   f.PrintLn(genloc__, "      if(object)");
+   f.PrintLn(genloc__, "      {");
+   f.PrintLn(genloc__, "         deletei(object->impl);");
+   f.PrintLn(genloc__, "         if(object->mustFree)");
+   f.PrintLn(genloc__, "            delete object;");
+   f.PrintLn(genloc__, "      }");
+   f.PrintLn(genloc__, "   }", ln);
+
+   f.PrintLn(genloc__, "   TC& operator*() const { return *object; }");
+   f.PrintLn(genloc__, "   TC* operator->() const { return object; }");
+   f.PrintLn(genloc__, "};", ln);
+}
+
+void cppHardcodedNativeTypeTemplates(CPPGen g, File f)
+{
+   f.PrintLn(genloc__, "template<typename TTT> C(Class) * class_of(const Instance & v) { return v.impl ? v.impl->_class : v._class.impl; };");
+   f.PrintLn(genloc__, "template<typename TTT> C(Class) * class_of(short v) { C(Class) * c = CO(int); return c; };");
+   f.PrintLn(genloc__, "template<typename TTT> C(Class) * class_of(int v) { C(Class) * c = CO(int); return c; };");
+   f.PrintLn(genloc__, "template<typename TTT> C(Class) * class_of(int64 v) { C(Class) * c = CO(int); return c; };");
+   f.PrintLn(genloc__, "template<typename TTT> C(Class) * class_of(double v) { return CO(double); };");
+   f.PrintLn(genloc__, "template<typename TTT> C(Class) * class_of(float v)  { return CO(float); };");
+   f.PrintLn(genloc__, "template<typename TTT> C(Class) * class_of(const char * v) { C(Class) * c = CO(String); return c; };");
+   f.PrintLn(genloc__, "template<typename TTT> C(Class) * class_of(char * v) { return CO(String); };", ln);
+
+   f.PrintLn(genloc__, "#define classof(x) class_of<decltype(x)>((x))", ln);
+
+   f.PrintLn(genloc__, "template <typename TTT, C(Class) ** TCO> inline const void * vapass(TNHInstance<TTT, TCO> & f) { return f.impl; }");
+   f.PrintLn(genloc__, "inline const void * vapass(const char * f) { return f; }");
+   f.PrintLn(genloc__, "inline const void * vapass(const short & f) { return &f; }");
+   f.PrintLn(genloc__, "inline const void * vapass(const int & f) { return &f; }");
+   f.PrintLn(genloc__, "inline const void * vapass(const int64 & f) { return &f; }");
+   f.PrintLn(genloc__, "inline const void * vapass(const float & f) { return &f; }");
+   f.PrintLn(genloc__, "inline const void * vapass(const double & f) { return &f; }");
+   f.PrintLn(genloc__, "inline const void * vapass(const Instance & f) { return f.impl; }", ln);
+}
+
+#if 0
+void cppSomethingTemplateOrNohead(CPPGen g, File f)
+{
+   f.PrintLn(genloc__, "// Can also specialize if needed for very different behavior... Unlikely needed for bindings?", ln);
+   f.PrintLn(genloc__, "template<> inline IteratorPointer Container<double>::add(double value)", ln);
+   f.PrintLn(genloc__, "{", ln);
+   f.PrintLn(genloc__, "   return Container_add(impl, TAd(value));", ln);
+   f.PrintLn(genloc__, "}", ln, ln);
+
+   f.PrintLn(genloc__, "template<> inline IteratorPointer Container<float>::add(float value)", ln);
+   f.PrintLn(genloc__, "{", ln);
+   f.PrintLn(genloc__, "   return Container_add(impl, TAf(value));", ln);
+   f.PrintLn(genloc__, "}", ln);
+}
+#endif // 0

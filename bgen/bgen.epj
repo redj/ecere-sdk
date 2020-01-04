@@ -116,7 +116,8 @@
             "debug.eh",
             "debug.c",
             "extras.ec",
-            "bgen.eh"
+            "bgen.eh",
+            "econe.eh"
          ]
       }
    ],
@@ -134,14 +135,6 @@
                   "c_header_ec_hardcoded.src",
                   "c_header_ec_hardcoded_after.src",
                   "c_make.src"
-               ]
-            },
-            {
-               "Folder" : "cpp",
-               "Files" : [
-                  "cpp_header_open.src",
-                  "cpp_header_close.src",
-                  "cpp_header_ec_macros.src"
                ]
             },
             {

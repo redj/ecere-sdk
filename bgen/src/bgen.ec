@@ -53,6 +53,7 @@ enum ArgSym : ArgumentSymbol
    Java,
    Python,
    _,
+   genLocs,
    bypassMacros,
    __;
 
@@ -350,6 +351,7 @@ public class BGen : ConsoleApplication // <ArgSym>
       addArgumentSymbol(ArgSym::Java,           "java",                 strict,  0);
       addArgumentSymbol(ArgSym::Python,         "py",                   strict,  0);
       addArgumentSymbol(ArgSym::Python,         "python",               strict,  0);
+      addArgumentSymbol(ArgSym::genLocs,        "generate-locations",   super,   0);
       addArgumentSymbol(ArgSym::bypassMacros,   "bypass-macros",        super,   0);
       addArgumentSymbol(ArgSym::clearAll,       "clear-all",            super,   0);
       addArgumentSymbol(ArgSym::clearLanguages, "clear-languages",      super,   0);
@@ -377,6 +379,7 @@ public class BGen : ConsoleApplication // <ArgSym>
       setArgumentSpec(ArgSym::CSharp,         { option, once, ArgSym::language });
       setArgumentSpec(ArgSym::Java,           { option, once, ArgSym::language });
       setArgumentSpec(ArgSym::Python,         { option, once, ArgSym::language });
+      setArgumentSpec(ArgSym::genLocs,        { option, many });
       setArgumentSpec(ArgSym::bypassMacros,   { option, many });
       //setArgumentSpec(ArgSym::tell,           { option, many });
       setArgumentSpec(ArgSym::batchFile,      { option, once });
@@ -498,6 +501,9 @@ public class BGen : ConsoleApplication // <ArgSym>
                      break;
                   case forceList:
                      opts.libScope.blackList = force;
+                     break;
+                  case genLocs:
+                     opts.optScope.genLocs = true;
                      break;
                   case bypassMacros:
                      opts.optScope.expandMacros = true;
@@ -1005,8 +1011,8 @@ bool cppTypeNameCall;
 
 AVLTree<const String> tmpcppececeremesstypedef // hack
 { [
-   "Alignment",
-   "DataDisplayFlags"
+   // "Alignment",
+   // "DataDisplayFlags"
 ] };
 
 AVLTree<const String> tmpcppececeremessclass // hack
@@ -1018,6 +1024,18 @@ AVLTree<const String> tmpcppececeremessclass // hack
 ] };
 
 define app = ((BGen)__thisModule);
+bool genloc__on;
 CGen g_; // todo
 bool python; // todo
 bool py; // todo
+
+bool impossibledebug_bmethod_hasTemplateAnything(BMethod m)
+{
+   Type t = m.md.dataType;
+   Type param;
+   for(param = t.params.first; param; param = param.next)
+   {
+      if(param.kind == templateType) return true;
+   }
+   return false;
+}

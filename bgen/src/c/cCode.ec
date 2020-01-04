@@ -380,6 +380,8 @@ static void cInCodeInitClasses(AST out, CGen g)
             Property cn; IterConversion conv { cl };
             while((md = met.next(publicOnly)))
             {
+               if(brokenMethodsC.Find({ cl.name, md.name }))
+                  continue;
                // skipping Module::Load and Module::Unload here because we want to use the dllexported methods directly
                if(!g.lib.ecereCOM || !(c.isModule && (!strcmp(md.name, "Load") || !strcmp(md.name, "Unload"))))
                {
@@ -456,7 +458,9 @@ static void cInCodeInitStart(AST out, CGen g)
    ASTRawString raw { }; ZString z { allocType = heap };
    if(g.lib.ecereCOM)
    {
-      z.concatx("LIB_EXPORT ", g_.sym.application, " ", g.lib.bindingName,
+      z.concatx(g_.sym.module, " theEcereModule;", ln, ln);
+
+      z.concatx("LIB_EXPORT ", g.sym.application, " ", g.lib.bindingName,
             "_init(", g_.sym.module, " fromModule, bool loadEcere, bool guiApp, int argc, char * argv[])", ln);
       z.concatx("{", ln);
       z.concatx("#ifdef _DEBUG", ln);

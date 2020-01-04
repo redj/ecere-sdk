@@ -1,5 +1,6 @@
 #include "debug.eh"
 #include "bgen.eh"
+#include "econe.eh"
 
 import "bgen"
 
@@ -22,6 +23,38 @@ define _enumClass = "ClassType_enumClass";
 define _noHeadClass = "ClassType_noHeadClass";
 define _unionClass = "ClassType_unionClass";
 define _systemClass = "ClassType_systemClass";
+
+AVLTree<consttstr> brokenMethodsC { [
+   // AttributeStore::requestAttributes
+   //    virtual void requestAttributes(Array<AttributesKey> requests, void (* completedCallback)(void *context, HashMap<int64, Map<int, FieldValue>> multiResults), void* context)
+   // generates following code:
+   //    // void AttributeStore_requestAttributes(C(AttributeStore) __i, C(Array) requests, void (* completedCallback)(void * context, C(HashMap) multiResults), void * context);
+   //    #define AttributeStore_requestAttributes(__i, requests, void (* completedCallback)(context, multiResults), context) \
+   //       VMETHOD(CO(AttributeStore), AttributeStore, requestAttributes, __i, void, \
+   //          C(AttributeStore) _ARG C(Array) _ARG void (*)(void *, C(HashMap)) _ARG void *, \
+   //          __i _ARG requests _ARG void (* completedCallback)(context, multiResults) _ARG context)
+   // gives following error:
+   //    gnosis3.h:1310:62: error: "(" may not appear in macro parameter list
+   { "AttributeStore", "requestAttributes" },
+
+   // AttributeStore::retrieveMultiValues
+   //    HashMap<int64, Map<int, FieldValue>> retrieveMultiValues(Map<Array<int>, Array<int64>> fieldAndFeatureIDs,
+   //       bool AttributeStore::getValueMethod(int64 featureID, int fieldID, FieldValue value))
+   // generates following code:
+   //          METHOD(AttributeStore, retrieveMultiValues) = Class_findMethod(CO(AttributeStore), "retrieveMultiValues", module);
+   //          if(METHOD(AttributeStore, retrieveMultiValues))
+   //             AttributeStore_retrieveMultiValues = (C(HashMap) (*)(C(AttributeStore), C(Map), C(bool) ()(int64, int, C(FieldValue) *)))METHOD(AttributeStore, retrieveMultiValues)->function;
+   // gives following error:
+   //    error: type name declared as function returning a function
+   { "AttributeStore", "retrieveMultiValues" },
+
+   // CMSSList::parse
+   // same case
+   { "CMSSList", "parse" },
+
+
+   { null, null }
+] };
 
 void runPreprocessor(const String src, const String tmp, Gen g)
 {
@@ -545,9 +578,9 @@ class CGen : Gen
                conassertctx(clDep != null, "(bgen?) eSystem_FindClass(mod, \"", c.base, "\") is returning null?");
             }
             if(tDep)
-               v.processDependency(otypedef, otypedef, tDep);
+               v.processDependency(this, otypedef, otypedef, tDep);
             else if(clDep && clDep != cl)
-               v.processDependency(otypedef, otypedef, clDep);
+               v.processDependency(this, otypedef, otypedef, clDep);
          }
          aClass(c, v, &created);
       }
@@ -754,13 +787,15 @@ class CGen : Gen
          {
             BMethod m = md;
             BVariant v = m;
+            if(brokenMethodsC.Find({ cl.name, md.name }))
+               continue;
             conassertctx(m != null, "?");
             o = m.outInHeader = BOutput { vmethod, m = m, omethod };
             o.output.Add(astMethod(this, md, cl, c, methodFlag, instanceClass, &haveContent, v));
             c.outMethods.Add(o);
             c.nspace.addContent(v);
             if(lib.ecereCOM)
-               v.processDependency(omethod, otypedef, clDepMethod);
+               v.processDependency(this, omethod, otypedef, clDepMethod);
          }
          if(lib.ecereCOM && c.is_class)
          {
@@ -773,7 +808,7 @@ class CGen : Gen
                o.output.Add(astMethod(this, md, cl, c, methodFlag, instanceClass, &haveContent, /*v*/null));
                c.outMethods.Add(o);
                c.nspace.addContent(v);
-               v.processDependency(omethod, otypedef, clDepMethod);
+               v.processDependency(this, omethod, otypedef, clDepMethod);
             }
          }
          while((cn = conv.next(publicOnly)))
@@ -782,10 +817,10 @@ class CGen : Gen
             BVariant v = p;
             o = p.outInHeader = BOutput { vproperty, p = p, oconversion };
             o.output.Add(astProperty(cn, c, _import, false, &c.first, &haveContent));
-            c.outProperties.Add(o);
+            c.outConversions.Add(o);
             c.nspace.addContent(v);
             if(lib.ecereCOM)
-               v.processDependency(oconversion, otypedef, clDepProperty);
+               v.processDependency(this, oconversion, otypedef, clDepProperty);
          }
          while((pt = prop.next(publicOnly)))
          {
@@ -793,11 +828,11 @@ class CGen : Gen
             BVariant v = p;
             o = p.outInHeader = BOutput { vproperty, p = p, oproperty };
             o.output.Add(astProperty(pt, c, _import, false, &c.first, &haveContent));
-            c.outConversions.Add(o);
+            c.outProperties.Add(o);
             c.nspace.addContent(v);
             processTypeDependency(this, pt.dataType, pt.dataTypeString, oproperty, v);
             if(lib.ecereCOM)
-               v.processDependency(oproperty, otypedef, clDepProperty);
+               v.processDependency(this, oproperty, otypedef, clDepProperty);
          }
       }
    }
@@ -1206,7 +1241,8 @@ ASTRawString astProperty(Property pt, BClass c, GenPropertyMode mode, bool conve
             if(!pt.Get && !pt.Set)
             {
                const char * dataType = tokenTypeString(cl.dataType);
-               z.concatx(g_.preproLimiter, "#define ", c.name, "(x)  ((", p.cConvUse.symbolName, ")(x))", ln);
+               z.concatx(g_.preproLimiter, "#define ", c.name, " ", c.upper, ln);
+               z.concatx(g_.preproLimiter, "#define ", c.upper, "(x)  ((", p.cConvUse.symbolName, ")(x))", ln);
                z.concatx(g_.preproLimiter, "#define ", p.name, "_in_", c.name, "(x)  ((", dataType, ")(x))", ln);
                if(haveContent) *haveContent = true;
             }
@@ -1225,7 +1261,9 @@ void genPropertyConversion(ZString z, BClass c, BProperty p, DataValueType type,
    {
       double m = 1, b = 0;
       bool forSet = fn == p.pt.Set;
-      z.concatx(g_.preproLimiter, "#define ", forSet ? p.cConvUse.name : "", forSet ? "_in_" : "", c.name, "(x)  ");
+      if(!forSet)
+         z.concatx(g_.preproLimiter, "#define ", c.name, " ", c.upper, ln);
+      z.concatx(g_.preproLimiter, "#define ", forSet ? p.cConvUse.name : "", forSet ? "_in_" : "", forSet ? c.name : c.upper, "(x)  ");
       if(checkLinearMapping(type, fn, &m, &b))
       {
          const char * castString = forSet ? tokenTypeString(c.cl.dataType) : p.cConvUse.symbolName;
@@ -1480,11 +1518,11 @@ DeclarationInit astDeclInit(const char * name, CreateDeclInitMode mode,
    return di;
 }
 
-const char * nonTokenUnsignedTypeName(Type from)
+const char * nonTokenUnsignedTypeName(Type from, OptBits opt)
 {
    switch(from.kind)
    {
-      case charType:    return "byte";
+      case charType:    return opt.cpp ? "unsigned char" : "byte";
       case shortType:   return "uint16";
       case int64Type:   return "uint64";
       case int128Type:  return "uint128";
@@ -1549,6 +1587,25 @@ const char * tokenTypeString(Type from)
    return null;
 }
 
+static inline bool bareSymbolName(Class cl, OptBits opt)
+{
+   if(opt.cpp)
+   {
+      switch(cl.type)
+      {
+         case bitClass:
+         case enumClass:
+         case normalClass:
+         case noHeadClass:
+         case structClass:
+         case unitClass:
+            return true;
+      }
+      return false;
+   }
+   return opt.bare;
+}
+
 SpecsList astTypeSpec(TypeInfo ti, int * indirection, Type * resume, SpecsList to, OptBits opt, BVariant vTop)
 {
    int ptr = 0;
@@ -1562,14 +1619,14 @@ SpecsList astTypeSpec(TypeInfo ti, int * indirection, Type * resume, SpecsList t
 
    if(t.kind == classType || t.kind == subClassType)
    {
-      _class = g_.getClassFromType(t, true);
+      _class = g_.getClassFromType(t, /*true*/!opt.cpp);
       if(_class)
          c = _class;
       isBaseClass = /*!t._class || !t._class.string || */c && c.is_class/*_class && !strcmp(_class.name, "class")*/;
    }
 
    if(t.kind == classType && _class &&
-         (_class.type == noHeadClass || (_class.type == structClass && opt.param) ||
+         ((_class.type == noHeadClass && !opt.cpp) || (_class.type == structClass && opt.param) ||
          (isBaseClass && t.classObjectType != anyObject)))
    {
       if(!ptr) // tocheck
@@ -1634,8 +1691,8 @@ SpecsList astTypeSpec(TypeInfo ti, int * indirection, Type * resume, SpecsList t
          Class clDep = typeName ? eSystem_FindClass(g_.mod, typeName) : null;
          BOutputType vTopOutputType = clDep ? BOutputType::getFromVariantKind(vTop.kind) : nil;
          quals.Add(SpecBase { specifier = tokenType(t) });
-         if(vTopOutputType)
-            vTop.processDependency(vTopOutputType, otypedef, clDep);
+         if(!opt.cpp && vTopOutputType)
+            vTop.processDependency(g_, vTopOutputType, otypedef, clDep);
          break;
       }
       case charType: case shortType: case int64Type: case int128Type:
@@ -1647,10 +1704,10 @@ SpecsList astTypeSpec(TypeInfo ti, int * indirection, Type * resume, SpecsList t
             quals.Add(SpecBase { specifier = tokenType(t) });
          else
          {
-            quals.Add(SpecName { name = CopyString(nonTokenUnsignedTypeName(t)) });
+            quals.Add(SpecName { name = CopyString(nonTokenUnsignedTypeName(t, opt)) });
          }
-         if(clDep && vTopOutputType)
-            vTop.processDependency(vTopOutputType, otypedef, clDep);
+         if(!opt.cpp && clDep && vTopOutputType)
+            vTop.processDependency(g_, vTopOutputType, otypedef, clDep);
          break;
       }
       case intPtrType:
@@ -1660,8 +1717,8 @@ SpecsList astTypeSpec(TypeInfo ti, int * indirection, Type * resume, SpecsList t
          BOutputType vTopOutputType = vTop ? BOutputType::getFromVariantKind(vTop.kind) : nil;
          Class clDep = vTop ? eSystem_FindClass(g_.mod, typeName) : null;
          quals.Add(SpecName { name = CopyString(typeName) });
-         if(vTopOutputType)
-            vTop.processDependency(vTopOutputType, otypedef, clDep);
+         if(!opt.cpp && vTopOutputType)
+            vTop.processDependency(g_, vTopOutputType, otypedef, clDep);
          break;
       }
       case structType:
@@ -1674,10 +1731,10 @@ SpecsList astTypeSpec(TypeInfo ti, int * indirection, Type * resume, SpecsList t
          {
             if(isBaseClass)
             {
-               char * symbolName = opt.asis ? CopyString(name) : g_.allocMacroSymbolName(nativeSpec, C, { cl = _class }, name, null, 0);
+               char * symbolName = bareSymbolName(_class, opt) ? CopyString(name) : g_.allocMacroSymbolName(nativeSpec, C, { cl = _class }, name, null, 0);
                quals.Add(SpecName { name = symbolName });
-               if(vTopOutputType)
-                  vTop.processDependency(vTopOutputType, otypedef, _class);
+               if(!opt.cpp && vTopOutputType)
+                  vTop.processDependency(g_, vTopOutputType, otypedef, _class);
 
             }
             else
@@ -1689,23 +1746,29 @@ SpecsList astTypeSpec(TypeInfo ti, int * indirection, Type * resume, SpecsList t
          }
          else
          {
-            char * symbolName = opt.asis ? CopyString(name) : g_.allocMacroSymbolName(nativeSpec, C, { }, name, null, 0);
+            char * symbolName;
+            if(opt.cpp && _class.type == unitClass && !c.isUnichar && bareSymbolName(_class, opt))
+               symbolName = CopyString(name);
+            else
+               symbolName = bareSymbolName(_class, opt) ? CopyString(name) : g_.allocMacroSymbolName(nativeSpec, C, { }, name, null, 0);
+            if(ti.type.constant && strcmp(symbolName, "constString"))
+               quals.Add(SpecBase { specifier = _const });
             quals.Add(SpecName { name = symbolName });
-            if(vTopOutputType && !(vTopOutputType == otypedef && vTop.kind == vclass) && (_class || t._class.registered))
-               vTop.processDependency(vTopOutputType, otypedef, _class ? _class : t._class.registered);
+            if(!opt.cpp && vTopOutputType && !(vTopOutputType == otypedef && vTop.kind == vclass) && (_class || t._class.registered))
+               vTop.processDependency(g_, vTopOutputType, otypedef, _class ? _class : t._class.registered);
          }
          break;
       }
       case thisClassType:
       {
-         char * symbolName = opt.asis ? CopyString(name) :
+         char * symbolName = bareSymbolName(_class, opt) ? CopyString(name) :
                g_.allocMacroSymbolName(false, THISCLASS, { cl = ti.cl }, ti.cl ? ti.cl.name : "Instance", null, ti.cl && ti.cl.type == noHeadClass ? 1 : 0);
          quals.Add(SpecName { name = symbolName });
          break;
       }
       case subClassType:
       {
-         char * symbolName = opt.asis ? CopyString(name) :
+         char * symbolName = bareSymbolName(_class, opt) ? CopyString(name) :
                g_.allocMacroSymbolName(false, SUBCLASS, { cl = _class }, name, null, 0);
          quals.Add(SpecName { name = symbolName });
          break;
@@ -1720,8 +1783,8 @@ SpecsList astTypeSpec(TypeInfo ti, int * indirection, Type * resume, SpecsList t
             {
                BTemplaton t = g_.bmod.addTempleton(ctp, cl.templateClass ? cl.templateClass : cl);
                quals.Add(SpecName { name = CopyString(t.cname) });
-               if(vTop && vTop.kind == vclass)
-                  vTop.processDependency(ostruct, otypedef, t);
+               if(!opt.cpp && vTop && vTop.kind == vclass)
+                  vTop.processDependency(g_, ostruct, otypedef, t);
             }
             else conmsg("check");
          }
@@ -1784,8 +1847,8 @@ void astTypeName(const char * ident, TypeInfo ti, OptBits opt, BVariant vTop, Ty
          {
             Class clDep = vTop ? eSystem_FindClass(g_.mod, "Class") : null;
             BOutputType vTopOutputType = clDep ? BOutputType::getFromVariantKind(vTop.kind) : nil;
-            if(vTopOutputType)
-               vTop.processDependency(vTopOutputType, otypedef, clDep);
+            if(!opt.cpp && vTopOutputType)
+               vTop.processDependency(g_, vTopOutputType, otypedef, clDep);
          }
       }
       tn =  ASTTypeName
@@ -1825,7 +1888,7 @@ void astTypeName(const char * ident, TypeInfo ti, OptBits opt, BVariant vTop, Ty
       ASTDeclarator decl = opt.anonymous ? null : astDeclIdentifier(safeIdent);
       delete safeIdent;
       if(!opt.notype)
-         quals = astTypeSpec(ti, &ptr, &t, null, { param = opt.param, asis = opt.asis }, vTop);
+         quals = astTypeSpec(ti, &ptr, &t, null, { param = opt.param, bare = opt.bare, cpp = opt.cpp }, vTop);
       else
          // trying this instead of //astTypeSpec(ti, &ptr, &t, null, { param = opt.param }, vTop);
          t = unwrapPointerType(ti.type, &ptr);
@@ -1836,7 +1899,7 @@ void astTypeName(const char * ident, TypeInfo ti, OptBits opt, BVariant vTop, Ty
          decl = astDeclArray(decl, null, false, &ti.type);
          // FIXME: This is not always true in C++ bindings generation?
          ; // conassertctx(ti.type == t.arrayType, "?");
-         quals = astTypeSpec(ti, &ptr, &t, null, { asis = opt.asis }, vTop);
+         quals = astTypeSpec(ti, &ptr, &t, null, { bare = opt.bare, cpp = opt.cpp }, vTop);
       }
       else if(t.kind == functionType)
       {
@@ -1846,7 +1909,7 @@ void astTypeName(const char * ident, TypeInfo ti, OptBits opt, BVariant vTop, Ty
          //if(ptr) conmsg("check");
          if(quals) conmsg("check");
          ti.type = t.returnType;
-         quals = astTypeSpec(ti, &ptr2, &t2, null, { asis = opt.asis }, vTop);
+         quals = astTypeSpec(ti, &ptr2, &t2, null, { bare = opt.bare, cpp = opt.cpp }, vTop);
          decl = DeclFunction { declarator = DeclBrackets { declarator = astDeclPointer(ptr, decl) }, parameters = list };
          ptr = 0;
          for(param = t.params.first; param; param = param.next)
@@ -2095,7 +2158,7 @@ ASTRawString astDefine(DefinedExpression df, BDefine d, Expression e, BVariant v
             Class clDep = eSystem_FindClass(g_.mod, "uintsize");
             conassertctx(clDep != null, "(bgen?) eSystem_FindClass(g_.mod, \"uintsize\") is returning null?");
             if(clDep)
-               v.processDependency(oother, otypedef, clDep);
+               v.processDependency(g_, oother, otypedef, clDep);
          }
       }
       else if(!strcmp(d.name, "strcmpi"))
@@ -2107,7 +2170,7 @@ ASTRawString astDefine(DefinedExpression df, BDefine d, Expression e, BVariant v
             Class clDep = eSystem_FindClass(g_.mod, "uintsize");
             conassertctx(clDep != null, "(bgen?) eSystem_FindClass(g_mod, \"uintsize\") is returning null?");
             if(clDep)
-               v.processDependency(oother, otypedef, clDep);
+               v.processDependency(g_, oother, otypedef, clDep);
          }
       }
       else if(e.expType && (e.type == constantExp || e.type == bracketsExp || e.type == conditionExp ||
@@ -2134,7 +2197,7 @@ ASTRawString astDefine(DefinedExpression df, BDefine d, Expression e, BVariant v
             z.concatx("static ", e.expType.constant ? "" : "const ", type, " ", d.name, ";", ln);
             conassertctx(clDep != null, "(bgen?) eSystem_FindClass(g_.mod, \"", depType, "\") is returning null?");
             if(clDep)
-               v.processDependency(oother, otypedef, clDep);
+               v.processDependency(g_, oother, otypedef, clDep);
          }
          if(e.expType.kind == pointerType)
             e.expType.constant = constant;
@@ -2238,7 +2301,7 @@ ASTRawString astBitTool(Class cl, BClass c)
 {
    ASTRawString raw { };
    ZString z { allocType = heap };
-   Array<String> bitMembers = null;
+   Array<const String> bitMembers = null;
    bool haveContent = false;
    DataMember dm; IterDataMember dat { cl };
    if(!python && cl.members.count <= 4) bitMembers = { };
@@ -2257,7 +2320,7 @@ ASTRawString astBitTool(Class cl, BClass c)
          String n = CopyString(n_);
          String s = PrintString(c.upper, "_SET_", bm.name);
          String x;
-         if(bitMembers) bitMembers.Add(CopyString(bm.name));
+         if(bitMembers) bitMembers.Add(bm.name);
          n[strlen(n)-1] = 0;
          x = PrintHexUInt64(bm.mask);
          if(!(x && x[0])) conmsg("check");
@@ -2285,7 +2348,7 @@ ASTRawString astBitTool(Class cl, BClass c)
       z.concatx(g_.preproLimiter, "#define ", c.upper, "(");
       for(i = 0; i < bitMembers.count; i++)
       {
-         char * name = bitMembers[i];
+         const char * name = bitMembers[i];
          charCount += strlen(name) + i ? 2 : 0;
          if(i) z.concatx(", ");
          z.concatx(name);
@@ -2295,12 +2358,11 @@ ASTRawString astBitTool(Class cl, BClass c)
          z.concatx("(");
       for(i = 0; i < bitMembers.count; i++)
       {
-         char * name = bitMembers[i];
+         const char * name = bitMembers[i];
          if(i) z.concatx(" | ");
          z.concatx("((", c.symbolName, ")(", name, ")) << ", c.upper, "_", name, "_SHIFT)");
       }
       z.concatx(ln);
-      bitMembers.Free();
       delete bitMembers;
    }
    if(haveContent) z.concatx(ln);
@@ -2482,7 +2544,7 @@ void processTypeDependency(CGen g, Type _type, const char * dataTypeString, BOut
    bool pointer;
    const char * n = null;
    Type t = unwrapType(_type, &native, &pointer);
-   if(!native || (!t.isSigned && (n = nonTokenUnsignedTypeName(t))))
+   if(!native || (!t.isSigned && (n = nonTokenUnsignedTypeName(t, { }))))
    {
       Class clDep = null;
       switch(t.kind)
@@ -2506,7 +2568,7 @@ void processTypeDependency(CGen g, Type _type, const char * dataTypeString, BOut
                {
                   BTemplaton t = g_.bmod.addTempleton(ctp, cl.templateClass ? cl.templateClass : cl);
                   if(vTop && vTop.kind == vclass)
-                     vTop.processDependency(ostruct, otypedef, t);
+                     vTop.processDependency(g_, ostruct, otypedef, t);
                }
             }
             break;
@@ -2542,11 +2604,11 @@ void _processTypeDependency(CGen g, BOutputType from, BVariant vTop, bool pointe
       if(clDep.templateClass)
       {
          BTemplaton tDep = g.bmod.addTemplateType(clDep, g.bmod.root_nspace);
-         vTop.processDependency(from, otypedef, tDep);
+         vTop.processDependency(g_, from, otypedef, tDep);
          clDep = clDep.templateClass;
       }
       else
-         vTop.processDependency(from, otypedef, clDep);
+         vTop.processDependency(g_, from, otypedef, clDep);
       if(!pointer && clDep.type != systemClass && clDep.type != unitClass && clDep.type != bitClass)
       {
          if(clDep.type == enumClass) to = oenum;
@@ -2554,7 +2616,7 @@ void _processTypeDependency(CGen g, BOutputType from, BVariant vTop, bool pointe
                clDep.type == normalClass) to = ostruct;
          else conmsg("check");
          if(!clDep.templateClass)
-            vTop.processDependency(from, to, clDep);
+            vTop.processDependency(g_, from, to, clDep);
       }
    }
 }
