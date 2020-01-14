@@ -124,7 +124,8 @@
             "debug.eh",
             "debug.c",
             "extras.ec",
-            "bgen.eh"
+            "bgen.eh",
+            "econe.eh"
          ]
       }
    ],
