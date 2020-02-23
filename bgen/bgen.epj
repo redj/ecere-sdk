@@ -22,13 +22,17 @@
             "PreprocessorDefinitions" : [
                "_DEBUG"
             ],
-            "FastMath" : false
+            "FastMath" : false,
+            "InstallCommands" : [
+               "D:/c/e/e/misc/bgen-genloc-remover/obj/debug.win32/bgen-genloc-remover.exe D:/c/e/e/bindings"
+            ]
          }
       },
       {
          "Name" : "Release",
          "Options" : {
             "Debug" : false,
+            "NoLineNumbers" : true,
             "Optimization" : "Speed",
             "FastMath" : true
          }
@@ -117,7 +121,8 @@
             "debug.c",
             "extras.ec",
             "bgen.eh",
-            "econe.eh"
+            "econe.eh",
+            "debug.h"
          ]
       }
    ],

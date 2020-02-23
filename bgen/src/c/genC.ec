@@ -1620,6 +1620,8 @@ SpecsList astTypeSpec(TypeInfo ti, int * indirection, Type * resume, SpecsList t
    if(t.kind == classType || t.kind == subClassType)
    {
       _class = g_.getClassFromType(t, /*true*/!opt.cpp);
+      if(_class && _class.templateClass)
+         _class = _class.templateClass;
       if(_class)
          c = _class;
       isBaseClass = /*!t._class || !t._class.string || */c && c.is_class/*_class && !strcmp(_class.name, "class")*/;
@@ -1653,7 +1655,10 @@ SpecsList astTypeSpec(TypeInfo ti, int * indirection, Type * resume, SpecsList t
 
       if(!name)
       {
-         name = _class ? getClassTypeName(_class) : oldGetClassTypeName(t._class.string);
+         if(_class && opt.cpp)
+            name = CopyString(c.cpp_name);
+         else
+            name = _class ? getClassTypeName(_class) : oldGetClassTypeName(t._class.string);
          if(!strcmp(name, "unichar") || !strcmp(name, "any_object")) // hack
             nativeSpec = true;
          if(!strcmp(name, "class"))
@@ -1747,7 +1752,8 @@ SpecsList astTypeSpec(TypeInfo ti, int * indirection, Type * resume, SpecsList t
          else
          {
             char * symbolName;
-            if(opt.cpp && _class.type == unitClass && !c.isUnichar && bareSymbolName(_class, opt))
+            if((opt.cpp && _class && _class.type == unitClass && !c.isUnichar && bareSymbolName(_class, opt)) ||
+                  (!_class && t.kind == classType && t._class && !t._class.registered))
                symbolName = CopyString(name);
             else
                symbolName = bareSymbolName(_class, opt) ? CopyString(name) : g_.allocMacroSymbolName(nativeSpec, C, { }, name, null, 0);
@@ -2377,7 +2383,7 @@ ASTRawString astMethod(CGen g, Method md, Class cl, BClass c, MethodGenFlag meth
    ASTRawString raw { };
    ZString z { allocType = heap };
    BMethod m = md;
-   m.init(md, c);
+   m.init(md, c, g);
    if(md.type == virtualMethod)
    {
       *haveContent = true;
