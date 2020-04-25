@@ -40,6 +40,8 @@ _CF_DIR = ../../
 include $(_CF_DIR)crossplatform.mk
 include $(_CF_DIR)default.cf
 
+.NOTPARALLEL: $(NOT_PARALLEL_TARGETS)
+
 # POST-INCLUDES VARIABLES
 
 OBJ = obj/$(CONFIG).$(PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX)/

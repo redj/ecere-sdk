@@ -43,6 +43,8 @@ endif
 include $(_CF_DIR)crossplatform.mk
 include $(_CF_DIR)$(BS_REGEN_COMP).cf
 
+.NOTPARALLEL: $(NOT_PARALLEL_TARGETS)
+
 # POST-INCLUDES VARIABLES
 
 OBJ = obj/$(CONFIG).$(PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX)/
