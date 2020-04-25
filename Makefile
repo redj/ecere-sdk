@@ -3,6 +3,7 @@ ifneq ($(V),1)
 endif
 
 .PHONY: all clean realclean wipeclean distclean emptyoutput prepinstall actualinstall install copyonlyinstall uninstall troubleshoot outputdirs bootstrap deps ecere ecerecom ecerevanilla ear compiler prepbinaries epj2make libec2 bgen ide documentor eda prepcodeguard codeguard fixprecompile cleantarget pots installer regenbootstrap updatebootstrap update_ecere update_libec update_ecp update_ecc update_ecs ecereaudio
+.NOTPARALLEL: clean realclean wipeclean distclean install
 
 ROOT_ABSPATH := $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
 _CF_DIR = $(ROOT_ABSPATH)
