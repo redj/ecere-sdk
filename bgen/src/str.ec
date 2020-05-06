@@ -151,7 +151,7 @@ char * getNoNamespaceString(const char * str, char * buffer, bool camelCase)
       }
       if(kl)
       {
-         strncpy(o, i, kl);
+         strncpy(o, i, kl + 1);
          o += kl;
       }
       i += dl;
