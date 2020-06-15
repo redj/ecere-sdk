@@ -3,6 +3,13 @@ $(info Using config.mk configuration file.)
 include config.mk
 endif
 
+CROSSPLATFORM_MK := defined
+
+# that's ecere-sdk specific and should not be in the makefile library
+ifndef VERBOSE
+MAKEFLAGS += --no-print-directory
+endif
+
 # HOST PLATFORM DETECTION
 ifeq ($(OS),Windows_NT)
    HOST_PLATFORM := win32
