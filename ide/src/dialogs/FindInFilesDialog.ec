@@ -937,7 +937,7 @@ private:
                   {
                      if(relative && mode == workspace && prj != ide.project)
                      {
-                        char special[MAX_LOCATION];
+                        char special[MAX_FILENAME + MAX_LOCATION + 2];
                         sprintf(special, "(%s)%s", prj.name, fileRelative);
                         strcpy(fileRelative, special);
                      }
@@ -983,7 +983,7 @@ private:
                   {
                      if(relative && mode == workspace && prj != ide.project)
                      {
-                        char special[MAX_LOCATION];
+                        char special[MAX_FILENAME + MAX_LOCATION + 2];
                         sprintf(special, "(%s)%s", prj.name, fileRelative);
                         strcpy(fileRelative, special);
                      }
