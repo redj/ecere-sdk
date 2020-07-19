@@ -56,6 +56,7 @@ _ECSOURCES = \
 	../ide/src/OldIDESettings.ec \
 	../extras/gui/controls/StringsBox.ec \
 	../extras/types/DynamicString.ec \
+	../extras/gui/GuiConfigData.ec \
 	epj2make.ec
 
 ECSOURCES = $(call shwspace,$(_ECSOURCES))
@@ -164,6 +165,9 @@ $(OBJ)StringsBox.sym: ../extras/gui/controls/StringsBox.ec
 $(OBJ)DynamicString.sym: ../extras/types/DynamicString.ec
 	$(ECP) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c ../extras/types/DynamicString.ec -o $(OBJ)DynamicString.sym
 
+$(OBJ)GuiConfigData.sym: ../extras/gui/GuiConfigData.ec
+	$(ECP) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c ../extras/gui/GuiConfigData.ec -o $(OBJ)GuiConfigData.sym
+
 $(OBJ)epj2make.sym: epj2make.ec
 	$(ECP) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c epj2make.ec -o $(OBJ)epj2make.sym
 
@@ -190,6 +194,9 @@ $(OBJ)StringsBox.c: ../extras/gui/controls/StringsBox.ec $(OBJ)StringsBox.sym | 
 $(OBJ)DynamicString.c: ../extras/types/DynamicString.ec $(OBJ)DynamicString.sym | $(SYMBOLS)
 	$(ECC) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) $(FVISIBILITY) -c ../extras/types/DynamicString.ec -o $(OBJ)DynamicString.c -symbols $(OBJ)
 
+$(OBJ)GuiConfigData.c: ../extras/gui/GuiConfigData.ec $(OBJ)GuiConfigData.sym | $(SYMBOLS)
+	$(ECC) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) $(FVISIBILITY) -c ../extras/gui/GuiConfigData.ec -o $(OBJ)GuiConfigData.c -symbols $(OBJ)
+
 $(OBJ)epj2make.c: epj2make.ec $(OBJ)epj2make.sym | $(SYMBOLS)
 	$(ECC) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) $(FVISIBILITY) -c epj2make.ec -o $(OBJ)epj2make.c -symbols $(OBJ)
 
@@ -215,6 +222,9 @@ $(OBJ)StringsBox.o: $(OBJ)StringsBox.c
 
 $(OBJ)DynamicString.o: $(OBJ)DynamicString.c
 	$(CC) $(CFLAGS) $(PRJ_CFLAGS) $(FVISIBILITY) -c $(OBJ)DynamicString.c -o $(OBJ)DynamicString.o
+
+$(OBJ)GuiConfigData.o: $(OBJ)GuiConfigData.c
+	$(CC) $(CFLAGS) $(PRJ_CFLAGS) $(FVISIBILITY) -c $(OBJ)GuiConfigData.c -o $(OBJ)GuiConfigData.o
 
 $(OBJ)epj2make.o: $(OBJ)epj2make.c
 	$(CC) $(CFLAGS) $(PRJ_CFLAGS) $(FVISIBILITY) -c $(OBJ)epj2make.c -o $(OBJ)epj2make.o

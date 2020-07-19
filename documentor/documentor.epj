@@ -76,7 +76,8 @@
                   "../ide/src/OldIDESettings.ec"
                ]
             },
-            "../extras/gui/controls/StringsBox.ec"
+            "../extras/gui/controls/StringsBox.ec",
+            "../extras/gui/GuiConfigData.ec"
          ]
       },
       {
