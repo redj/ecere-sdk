@@ -464,7 +464,7 @@ public Map<String, FontInfo> ListAvailableFonts()
    fontSet = FcFontList(fcConfig, pattern, objectSet);
    if(fontSet)
    {
-      MapIterator<String, FontInfo> it { map = fonts };
+      MapIterator<String, FontInfo> it { map = (void*)fonts };
       for(i = 0; i < fontSet->nfont; i++)
       {
          FcPattern * font = fontSet->fonts[i];

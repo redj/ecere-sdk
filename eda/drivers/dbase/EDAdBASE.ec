@@ -433,7 +433,7 @@ class dBaseDatabase : Database
    {
       if(options.type == tableRows && FileExists(apath).isFile)
       {
-         MapIterator<String, dBaseTable> it { map = dbTables };
+         MapIterator<String, dBaseTable> it { map = (void*)dbTables };
          if(!it.Index(apath, true))
          {
             dBaseTable dbTbl { tblType = tableRows, apath = CopyString(apath) };

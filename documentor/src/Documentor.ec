@@ -1014,7 +1014,7 @@ static char * ReadDoc(Module module, DocumentationType type, void * object, Docu
       ItemDoc itDoc = null;
       if(type == functionDoc)
       {
-         MapIterator<String, FunctionDoc> it { map = nsDoc.functions };
+         MapIterator<String, FunctionDoc> it { map = (void*)nsDoc.functions };
          const char * name = RSearchString(function.name, "::", strlen(function.name), true, false);
          if(name) name += 2; else name = function.name;
          if(it.Index(name, false))
@@ -1022,7 +1022,7 @@ static char * ReadDoc(Module module, DocumentationType type, void * object, Docu
       }
       else if(type == methodDoc)
       {
-         MapIterator<String, MethodDoc> it { map = clDoc.methods };
+         MapIterator<String, MethodDoc> it { map = (void*)clDoc.methods };
          if(it.Index(method.name, false))
             mdDoc = it.data;
       }
@@ -1145,7 +1145,7 @@ ItemDoc getDoc(char * filePath, Module module, DocumentationType type, void * ob
    //void pruneDocCache()
    // NOTE: If we want time stamp to be last retrieved, the pruning should be done before the retrieval
    {
-      MapIterator<String, DocCacheEntry> it { map = docCache };
+      MapIterator<String, DocCacheEntry> it { map = (void*)docCache };
       Array<const String> toRemove { };
       for(entry : docCache; now - entry.timeStamp > 30)
          toRemove.Add(&entry);
@@ -3409,7 +3409,7 @@ class HelpView : HTMLView
                         itDoc.description = contents; contents = null;
                         if(itDoc.isEmpty)
                         {
-                           MapIterator<String, ValueDoc> it { map = clDoc.values };
+                           MapIterator<String, ValueDoc> it { map = (void*)clDoc.values };
                            if(it.Index(((NamedLink)data).name, false))
                               it.Remove();
                            delete itDoc;
@@ -3430,7 +3430,7 @@ class HelpView : HTMLView
                         itDoc.description = contents; contents = null;
                         if(itDoc.isEmpty)
                         {
-                           MapIterator<String, DefineDoc> it { map = nsDoc.defines };
+                           MapIterator<String, DefineDoc> it { map = (void*)nsDoc.defines };
                            if(it.Index(((Definition)data).name, false))
                               it.Remove();
                            delete itDoc;
@@ -3454,7 +3454,7 @@ class HelpView : HTMLView
                         itDoc.description = contents; contents = null;
                         if(itDoc.isEmpty)
                         {
-                           MapIterator<String, ConversionDoc> it { map = clDoc.conversions };
+                           MapIterator<String, ConversionDoc> it { map = (void*)clDoc.conversions };
                            if(it.Index(name, false))
                               it.Remove();
                            delete itDoc;
@@ -3475,7 +3475,7 @@ class HelpView : HTMLView
                         itDoc.description = contents; contents = null;
                         if(itDoc.isEmpty)
                         {
-                           MapIterator<String, FieldDoc> it { map = clDoc.fields };
+                           MapIterator<String, FieldDoc> it { map = (void*)clDoc.fields };
                            if(it.Index(((DataMember)data).name, false))
                               it.Remove();
                            delete itDoc;
@@ -3496,7 +3496,7 @@ class HelpView : HTMLView
                         itDoc.description = contents, contents = null;
                         if(itDoc.isEmpty)
                         {
-                           MapIterator<String, PropertyDoc> it { map = clDoc.properties };
+                           MapIterator<String, PropertyDoc> it { map = (void*)clDoc.properties };
                            if(it.Index(((Property)data).name, false))
                               it.Remove();
                            delete itDoc;
@@ -3526,7 +3526,7 @@ class HelpView : HTMLView
                            itDoc.position = position;
                            if(itDoc.isEmpty)
                            {
-                              MapIterator<String, ParameterDoc> it { map = *parameters };
+                              MapIterator<String, ParameterDoc> it { map = (void*)*parameters };
                               if(it.Index(((Type)data).name, false))
                                  it.Remove();
                               delete itDoc;
@@ -3541,7 +3541,7 @@ class HelpView : HTMLView
 
          if(type == functionDoc && fnDoc && fnDoc.isEmpty)
          {
-            MapIterator<String, FunctionDoc> it { map = nsDoc.functions };
+            MapIterator<String, FunctionDoc> it { map = (void*)nsDoc.functions };
             const char * name = RSearchString(function.name, "::", strlen(function.name), true, false);
             if(name) name += 2; else name = function.name;
             if(it.Index(name, false))
@@ -3550,7 +3550,7 @@ class HelpView : HTMLView
          }
          else if(type == methodDoc && mdDoc && mdDoc.isEmpty)
          {
-            MapIterator<String, MethodDoc> it { map = clDoc.methods };
+            MapIterator<String, MethodDoc> it { map = (void*)clDoc.methods };
             if(it.Index(method.name, false))
                it.Remove();
             delete mdDoc;

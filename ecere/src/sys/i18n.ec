@@ -151,7 +151,7 @@ public dllexport void LoadTranslatedStrings(const String moduleName, const char 
          if(!moduleMaps)
             moduleMaps = { };
          {
-            MapIterator<const String, Map<const String, const String>> it { map = moduleMaps };
+            MapIterator<const String, Map<const String, const String>> it { map = (void*)moduleMaps };
             if(it.Index(name, false))
                delete it.data;
             // TOFIX: delete moduleMaps[module];
@@ -180,7 +180,7 @@ public dllexport void LoadTranslatedStrings(const String moduleName, const char 
 
             if(len)
             {
-               MapIterator<String, String> it { map = textMap };
+               MapIterator<String, String> it { map = (void*)textMap };
                // TOFIX: Memory leak if the add fails
                if(it.Index(original, false))
                   delete translated;
@@ -204,7 +204,7 @@ public dllexport void LoadTranslatedStrings(const String moduleName, const char 
 
 public dllexport void UnloadTranslatedStrings(const String name)
 {
-   MapIterator<const String, Map<const String, const String>> it { map = moduleMaps };
+   MapIterator<const String, Map<const String, const String>> it { map = (void*)moduleMaps };
    if(it.Index(name, false))
    {
       it.data.Free();

@@ -1385,7 +1385,7 @@ enum CreateDeclInitMode
 
 DeclarationInit astDeclInitGet(const char * name, CreateDeclInitMode mode)
 {
-   MapIterator<String, DeclarationInit> i { map = mode._struct ? structs : typedefs };
+   MapIterator<String, DeclarationInit> i { map = (void*)(mode._struct ? structs : typedefs) };
    if(!mode._get) conmsg("check");
    if(i.Index(name, false))
       return i.data;
@@ -1401,7 +1401,7 @@ DeclarationInit astDeclInit(const char * name, CreateDeclInitMode mode,
    if(mode._get) conmsg("check");
    if(!di && (mode._typedef || mode._struct))
    {
-      MapIterator<String, ASTNode> i { map = mode._struct ? structs : typedefs };
+      MapIterator<String, ASTNode> i { map = (void*)(mode._struct ? structs : typedefs) };
       if(i.Index(cl ? cl.name : name, mode.create))
          di = (DeclarationInit)i.data;
       else if(mode.create)

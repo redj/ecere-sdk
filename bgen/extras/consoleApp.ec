@@ -286,7 +286,7 @@ public:
       Map<const String, S> switches = scopes[scope];
       if(switches)
       {
-         MapIterator<const String, S> i { map = switches };
+         MapIterator<const String, S> i { map = (void*)switches };
          if(i.Index(string, false))
             sym = i.data;
       }
@@ -298,7 +298,7 @@ public:
       Map<const String, S> switches = scopes[scope];
       if(switches)
       {
-         MapIterator<const String, S> i { map = switches };
+         MapIterator<const String, S> i { map = (void*)switches };
          while(i.Next())
          {
             PrintLn(i.data, " <- ", i.key);
@@ -309,13 +309,13 @@ public:
 
    void addArgumentSwitch(S symbol, const char * string, ArgSwitchMapMode mode, S scope)
    {
-      MapIterator<S, Map<const String, S>> s { map = scopes };
+      MapIterator<S, Map<const String, S>> s { map = (void*)scopes };
       if(!s.Index(scope, true))
          s.data = Map<const String, S> { };
       //if(s.data)
       {
          Map<const String, S> switches = s.data;
-         MapIterator<const String, S> i { map = switches };
+         MapIterator<const String, S> i { map = (void*)switches };
          if(i.Index(string, true))
          {
             if(mode != soft)
@@ -409,7 +409,7 @@ public:
 
    void setArgumentSpec(S symbol, ArgumentSpec spec)
    {
-      MapIterator<S, ArgumentSpec> i { map = specs };
+      MapIterator<S, ArgumentSpec> i { map = (void*)specs };
       i.Index(symbol, true);
       i.data = spec;
    }

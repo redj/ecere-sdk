@@ -15,7 +15,7 @@ const char * indents(int count)
    BType result = null; \
    if(value) \
    { \
-      HashMapIterator<ECType, BType> i { map = g_._map }; \
+      HashMapIterator<ECType, BType> i { map = (void*)g_._map }; \
       if(i.Index(value, true)) \
          result = i.data; \
       else \
@@ -1104,7 +1104,7 @@ class BModule : struct
             const String b = d.name;
             consttstr t { strcmp(a, b) < 0 ? a : b, strcmp(a, b) > 0 ? a : b };
             bool update = false;
-            MapIterator<consttstr, NamespaceDependencyInfo> i { map = deps };
+            MapIterator<consttstr, NamespaceDependencyInfo> i { map = (void*)deps };
             //PrintLn(dependency.count);
             conassertctx(a != b && strcmp(a, b) != 0, "?");
             if(i.Index(t, true))
@@ -1132,7 +1132,7 @@ class BModule : struct
                const String a = orderedNamespaces[x].name;
                const String b = orderedNamespaces[d].name;
                consttstr t { strcmp(a, b) < 0 ? a : b, strcmp(a, b) > 0 ? a : b };
-               MapIterator<consttstr, NamespaceDependencyInfo> i { map = deps };
+               MapIterator<consttstr, NamespaceDependencyInfo> i { map = (void*)deps };
                conassertctx(a != b && strcmp(a, b) != 0, "?");
                if(i.Index(t, false))
                {
@@ -1410,7 +1410,7 @@ class BNamespace : struct
 
    void addOutputDependency(BNamespace n, BOutput user)
    {
-      MapIterator<BNamespacePtr, AVLTree<BOutputPtr>> i { map = dependencies };
+      MapIterator<BNamespacePtr, AVLTree<BOutputPtr>> i { map = (void*)dependencies };
       AVLTree<BOutputPtr> users;
       if(i.Index((BNamespacePtr)n, true)) users = i.data;
       else i.data = users = { };
@@ -1700,7 +1700,7 @@ class BClass : struct
       if(gen.lang == CPlusPlus)
       {
          bool templatePrefix = (cl.type == noHeadClass || ((cl.type == normalClass || cl.type == structClass) && cl.templateArgs));
-         MapIterator<const String, const String> iNameSwaps { map = gen.cpp_classNameSwaps };
+         MapIterator<const String, const String> iNameSwaps { map = (void*)gen.cpp_classNameSwaps };
          const char * n = isString ? cSymbol : gen.cpp_classNameSwaps && iNameSwaps.Index(name, false) ? iNameSwaps.data : name;
          /*
          const char * typeStr =
@@ -2047,7 +2047,7 @@ class BMethod : struct
       mname = copyCamelCaseString(md.name);
       if(gen.lang == CPlusPlus)
       {
-         MapIterator<consttstr, const String> iNameSwaps { map = gen.cpp_methodNameSwaps };
+         MapIterator<consttstr, const String> iNameSwaps { map = (void*)gen.cpp_methodNameSwaps };
          if(gen.cpp_methodNameSwaps && iNameSwaps.Index({ c.cl.name, name }, false))
             cpp_name = iNameSwaps.data;
          else if(gen.cpp_methodNameSwaps && iNameSwaps.Index({ "", name }, false))
@@ -2198,7 +2198,7 @@ bool checkForCircularNamespaceDependenciesB(BNamespacePtr a, BNamespace n, bool 
       if(b == a && (!indirectOnly || stack.count > 2))
       {
          SortedSetUIntPtr t { };
-         MapIterator<SortedSetUIntPtr, Array<BNamespacePtr>> i { map = circularDeps };
+         MapIterator<SortedSetUIntPtr, Array<BNamespacePtr>> i { map = (void*)circularDeps };
          for(x : stack)
             t.Add((uintptr)x);
          if(!i.Index(t, true)) // is t copied or now owned by the AVLTree? see //else below for delete t;
@@ -2265,7 +2265,7 @@ bool checkForCircularOutputDependencies(BVariantPtr a, BOutput n, bool indirectO
       if(b == a && (!indirectOnly || stack.count > 2))
       {
          SortedSetUIntPtr t { };
-         MapIterator<SortedSetUIntPtr, Array<BVariantPtr>> i { map = circularDeps };
+         MapIterator<SortedSetUIntPtr, Array<BVariantPtr>> i { map = (void*)circularDeps };
          for(x : stack)
             t.Add((uintptr)x);
          if(!i.Index(t, true)) // is t copied or now owned by the AVLTree? see //else below for delete t;

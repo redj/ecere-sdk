@@ -1170,7 +1170,7 @@ public:
                if(foundGroup)
                {
                   PrimitiveGroup newGroup = mesh.AddPrimitiveGroup(type, nIndices);
-                  MapIterator<MaterialAndType, PrimitiveGroup> it { map = map };
+                  MapIterator<MaterialAndType, PrimitiveGroup> it { map = (void*)map };
                   if(newGroup)
                   {
                      if(!it.Index({ material, type }, true))

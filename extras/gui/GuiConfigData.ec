@@ -96,10 +96,10 @@ public:
       if(saving)
       {
          GuiDataPaneSplitter * guiData = null;
-         MapIterator<String, GuiDataPaneSplitter> it { map = paneSplitters };
+         MapIterator<String, GuiDataPaneSplitter> it { map = (void*)paneSplitters };
 
          if(!paneSplitters)
-            it.map = paneSplitters = { };
+            it.map = (void*)(paneSplitters = { });
          if(!it.Index(configId, true))
             it.data = { };
          guiData = (GuiDataPaneSplitter *)paneSplitters.GetData(it.pointer);
@@ -162,16 +162,16 @@ private:
 
    GuiDataWindow * getWindowConfig(const char * configId)
    {
-      MapIterator<String, GuiDataWindow> it { map = windows };
+      MapIterator<String, GuiDataWindow> it { map = (void*)windows };
       return (windows && it.Index(configId, false)) ? (GuiDataWindow *)windows.GetData(it.pointer) : null;
    }
 
    GuiDataWindow * insertWindowConfig(const char * configId, bool *isNew)
    {
       GuiDataWindow * guiData = null;
-      MapIterator<String, GuiDataWindow> it { map = windows };
+      MapIterator<String, GuiDataWindow> it { map = (void*)windows };
       if(!windows)
-         it.map = windows = { };
+         it.map = (void*)(windows = { });
 
       if(!it.Index(configId, true))
       {
@@ -223,7 +223,7 @@ private:
 
    void applyPaneSplitterConfig(const char * configId, PaneSplitter paneSplitter)
    {
-      MapIterator<String, GuiDataPaneSplitter> it { map = paneSplitters };
+      MapIterator<String, GuiDataPaneSplitter> it { map = (void*)paneSplitters };
       if(paneSplitters && it.Index(configId, false))
       {
          GuiDataPaneSplitter * guiData = (GuiDataPaneSplitter *)paneSplitters.GetData(it.pointer);

@@ -3187,7 +3187,7 @@ static bool StringsAreSameOrMore(Array<String> strings, Array<String> originals,
    else if(strings && strings.count && originals && originals.count)
    {
       Map<String, String> map { };
-      MapIterator<String, bool> mit { map = map };
+      MapIterator<String, bool> mit { map = (void*)map };
       for(it : strings)
       {
          char * s = strstr(it, "\n");
@@ -3254,7 +3254,7 @@ static void RemovePlatformsCommonStrings(Map<String, bool> common, Array<String>
    if(strings)
    {
       Array<String> tmp { };
-      MapIterator<String, bool> mit { map = common };
+      MapIterator<String, bool> mit { map = (void*)common };
       for(it : strings)
       {
          char * s = it;

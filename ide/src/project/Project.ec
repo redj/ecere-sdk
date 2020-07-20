@@ -1448,7 +1448,7 @@ private:
    void ModifiedAllConfigs(bool making, bool compiling, bool linking, bool symbolGen)
    {
       Map<CIString, NameCollisionInfo> cfgNameCollision;
-      MapIterator<const String, Map<CIString, NameCollisionInfo>> it { map = configsNameCollisions };
+      MapIterator<const String, Map<CIString, NameCollisionInfo>> it { map = (void*)configsNameCollisions };
       if(it.Index("", false))
       {
          cfgNameCollision = it.data;

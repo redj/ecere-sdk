@@ -171,7 +171,7 @@ public:
    {
       CompiledShader shader = null;
 #if ENABLE_GL_SHADERS
-      MapIterator<uint64, CompiledShader> it { map = programs };
+      MapIterator<uint64, CompiledShader> it { map = (void*)programs };
       //PrintLn("Loading ", _class.name, " shader for state 0x", state, " (", (DefaultShaderBits)state, ")");
 
       if(!it.Index(state, true))
