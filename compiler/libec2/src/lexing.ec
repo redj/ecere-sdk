@@ -459,7 +459,7 @@ static Map<String, TokenType2> stringTokens
 static TokenType2 matchToken(const String text)
 {
    TokenType2 type = identifier;
-   MapIterator<String, TokenType2> it { map = (void*)stringTokens };
+   MapIterator<String, TokenType2> it { map = stringTokens };
    if(it.Index(text, false))
       type = it.data;
    return type;

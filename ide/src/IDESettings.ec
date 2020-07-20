@@ -2273,7 +2273,7 @@ class CompilerConfigs : List<CompilerConfig>
          {
             AVLTree<const String> addedConfigs { };
             Map<String, CompilerConfig> compilerConfigsByName = getCompilerConfigsByName(dir);
-            MapIterator<const String, CompilerConfig> it { map = (void*)compilerConfigsByName };
+            MapIterator<const String, CompilerConfig> it { map = compilerConfigsByName };
             Free();
             settingsContainer.compilerConfigs = this; // Merge IDEConfigHolder / IDESettingsContainer?
             if(it.Index("Default", false))
@@ -2310,7 +2310,7 @@ class CompilerConfigs : List<CompilerConfig>
       settingsContainer.getConfigFilePath(path, class(CompilerConfig), dir, null);
       paths = getCompilerConfigFilePathsByName(dir);
       {
-         MapIterator<String, String> it { map = (void*)paths };
+         MapIterator<String, String> it { map = paths };
          for(c : this)
          {
             CompilerConfig ccfg = c;

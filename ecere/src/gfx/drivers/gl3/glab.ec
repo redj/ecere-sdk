@@ -892,7 +892,7 @@ public:
       for(i = 0; i < count; i++)
       {
          uint tex = texs[i];
-         MapIterator<uint, uint64> it { map = (void*)textures };
+         MapIterator<uint, uint64> it { map = textures };
          if(it.Index(tex, false))
          {
             texMem -= it.data;
@@ -914,7 +914,7 @@ public:
       for(i = 0; i < count; i++)
       {
          uint buf = bufs[i];
-         MapIterator<uint, uint64> it { map = (void*)buffers };
+         MapIterator<uint, uint64> it { map = buffers };
          if(it.Index(buf, false))
          {
             bufMem -= it.data;

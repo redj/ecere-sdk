@@ -1786,7 +1786,7 @@ class SymbolgenApp : Application
             // Only generating .pot files when building from release.* directory for now
             //bool outputPot = symbolsDir && SearchString(symbolsDir, 0, "release.", false, false);
             Map<ContextStringPair, List<String> > intlStrings { };
-            MapIterator<ContextStringPair, List<String>> it { map = (void*)intlStrings };
+            MapIterator<ContextStringPair, List<String>> it { map = intlStrings };
 
             for(c = 1; c<argc; c++)
             {

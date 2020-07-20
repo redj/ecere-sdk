@@ -267,7 +267,7 @@ private:
       if(!languageOptions && create) languageOptions = { };
       if(languageOptions)
       {
-         MapIterator<Language, GenOptions> i { map = (void*)languageOptions };
+         MapIterator<Language, GenOptions> i { map = languageOptions };
          if(i.Index(lang, true)) options = i.data;
          else if(create) options = { }, i.data = options;
       }
@@ -280,7 +280,7 @@ private:
       if(!libraryOptions && create) libraryOptions = { };
       if(libraryOptions)
       {
-         MapIterator<String, GenOptions> i { map = (void*)libraryOptions };
+         MapIterator<String, GenOptions> i { map = libraryOptions };
          if(i.Index(library, true)) options = i.data;
          else if(create) options = { }, i.data = options;
       }
@@ -293,7 +293,7 @@ private:
       if(!specificOptions && create) specificOptions = { };
       if(specificOptions)
       {
-         MapIterator<LangLib, GenOptions> i { map = (void*)specificOptions };
+         MapIterator<LangLib, GenOptions> i { map = specificOptions };
          LangLib langlib { lang, library };
          if(i.Index(langlib, true)) options = i.data;
          else if(create) options = { }, i.data = options;
@@ -742,7 +742,7 @@ public class BGen : ConsoleApplication // <ArgSym>
             char * val = strchr(item, '=');
             if(val)
             {
-               MapIterator<String, String> i { map = (void*)m };
+               MapIterator<String, String> i { map = m };
                *val = 0;
                if(!i.Index(item, true))
                   i.data = CopyString(++val);

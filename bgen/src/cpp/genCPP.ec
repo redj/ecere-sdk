@@ -3055,7 +3055,7 @@ char * cppParams(BClass c, TypeInfo ti, CPPParamsOutputMode mode, BVariant vTop,
                if(param.kind != voidType)
                {
                   char * apname = null;
-                  MapIterator<consttstr, const String> i { map = (void*)methodParamNameSwap };
+                  MapIterator<consttstr, const String> i { map = methodParamNameSwap };
                   const char * name = i.Index({ ti.m ? ti.m.mname : ti.f.oname, param.name }, false) ? i.data : param.name;
                   Class clReg = null;
                   BClass cParam = null;

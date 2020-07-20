@@ -815,7 +815,7 @@ public void ImportModule(const char * name, ImportType importType, AccessMode im
                // We only load one component app at a time for Documentor, so we do not need this trick.
                if(!inCompiler && !inPreCompiler && !inSymbolGen && !inDocumentor)
                {
-                  MapIterator<String, List<Module> > it { map = (void*)loadedModules };
+                  MapIterator<String, List<Module> > it { map = loadedModules };
                   if(!it.Index(name /*file*/, false))
                   {
                      Module firstModule = eModule_LoadStrict(__thisModule.application, name /*file*/, importAccess);

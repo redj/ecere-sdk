@@ -1333,7 +1333,7 @@ void FreeModuleData(Module module)
    // Free the extra module instance on closing the last code editor using it
    if(!inCompiler)
    {
-      MapIterator <String, List<Module> > mapIt { map = (void*)loadedModules };
+      MapIterator <String, List<Module> > mapIt { map = loadedModules };
       while(mapIt.Next())
       {
          List<Module> list = mapIt.data;

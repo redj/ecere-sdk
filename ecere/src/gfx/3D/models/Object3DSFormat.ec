@@ -390,8 +390,8 @@ static void ComputeNormals(Mesh mesh, FileInfo * info, Object object)
    Map<SourceVertexInfo, DestVertexInfo> vertexMap { };
    Array<MapNode<SourceVertexInfo, DestVertexInfo>> vertices { size = nVertices };
 
-   MapIterator<SharedSourceVertexInfo, SharedDestVertexInfo> itShared { map = (void*)sharedVertices };
-   MapIterator<SourceVertexInfo, DestVertexInfo> it { map = (void*)vertexMap };
+   MapIterator<SharedSourceVertexInfo, SharedDestVertexInfo> itShared { map = sharedVertices };
+   MapIterator<SourceVertexInfo, DestVertexInfo> it { map = vertexMap };
 
    nNewVertices = nVertices;
    mVertices = mesh->vertices;
