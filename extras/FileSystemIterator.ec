@@ -82,7 +82,7 @@ public:
                      }
                   }
                   // frame.node = frame.dirPaths ? frame.dirPaths.root.minimum : null;
-                  frame.it.container = frame.dirPaths;
+                  frame.it.container = (void*)frame.dirPaths;
                   frame.next = frame.dirPaths ? frame.it.Next() : false;
                   frame.count = frame.dirPaths ? frame.dirPaths.GetCount() : 0;
                   frame.state = dirs;
@@ -112,7 +112,7 @@ public:
                   else
                   {
                      // frame.node = frame.filePaths ? frame.filePaths.root.minimum : null;
-                     frame.it.container = frame.filePaths;
+                     frame.it.container = (void*)frame.filePaths;
                      frame.next = frame.filePaths ? frame.it.Next() : false;
                      frame.count = frame.filePaths ? frame.filePaths.GetCount() : 0;
                      frame.state = files;
