@@ -2,7 +2,7 @@ ifneq ($(V),1)
 .SILENT:
 endif
 
-.PHONY: all objdir cleantarget clean realclean wipeclean distclean src/about.ec
+.PHONY: all objdir cleantarget clean realclean wipeclean distclean
 
 # CORE VARIABLES
 
@@ -46,7 +46,7 @@ OBJ = obj/$(CONFIG).$(PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX)/
 
 RES = res/
 
-TARGET = obj/$(CONFIG).$(PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX)/ecere-ide$(E)
+TARGET = $(OBJ)ecere-ide$(OUT)
 
 _ECSOURCES = \
 	../extras/FileSystemIterator.ec \
@@ -58,10 +58,10 @@ _ECSOURCES = \
 	src/dialogs/FindInFilesDialog.ec \
 	src/dialogs/GlobalSettingsDialog.ec \
 	src/dialogs/NewProjectDialog.ec \
-	src/dialogs/FontPicker.ec \
 	src/dialogs/NodeProperties.ec \
 	src/dialogs/WorkspaceSettings.ec \
 	src/dialogs/ProjectTabSettings.ec \
+	src/dialogs/FontPicker.ec \
 	src/project/Project.ec \
 	src/project/ProjectConfig.ec \
 	src/project/ProjectNode.ec \
@@ -71,12 +71,12 @@ _ECSOURCES = \
 	src/designer/CodeEditor.ec \
 	src/designer/CodeObject.ec \
 	src/designer/Designer.ec \
-	src/designer/SyntaxHighlighting.ec \
 	src/designer/findCtx.ec \
 	src/designer/findExp.ec \
 	src/designer/findParams.ec \
 	src/designer/Sheet.ec \
 	src/designer/ToolBox.ec \
+	src/designer/SyntaxHighlighting.ec \
 	src/debugger/debugFindCtx.ec \
 	src/debugger/Debugger.ec \
 	src/debugger/debugTools.ec \
@@ -98,15 +98,17 @@ _ECSOURCES = \
 
 ECSOURCES = $(call shwspace,$(_ECSOURCES))
 
-COBJECTS = $(call shwspace,$(addprefix $(OBJ),$(patsubst %.ec,%$(C),$(notdir $(_ECSOURCES)))))
+_COBJECTS = $(addprefix $(OBJ),$(patsubst %.ec,%$(C),$(notdir $(_ECSOURCES))))
+_SYMBOLS = $(addprefix $(OBJ),$(patsubst %.ec,%$(S),$(notdir $(_ECSOURCES))))
+_IMPORTS = $(addprefix $(OBJ),$(patsubst %.ec,%$(I),$(notdir $(_ECSOURCES))))
+_ECOBJECTS = $(addprefix $(OBJ),$(patsubst %.ec,%$(O),$(notdir $(_ECSOURCES))))
+_BOWLS = $(addprefix $(OBJ),$(patsubst %.ec,%$(B),$(notdir $(_ECSOURCES))))
 
-SYMBOLS = $(call shwspace,$(addprefix $(OBJ),$(patsubst %.ec,%$(S),$(notdir $(_ECSOURCES)))))
-
-IMPORTS = $(call shwspace,$(addprefix $(OBJ),$(patsubst %.ec,%$(I),$(notdir $(_ECSOURCES)))))
-
-ECOBJECTS = $(call shwspace,$(addprefix $(OBJ),$(patsubst %.ec,%$(O),$(notdir $(_ECSOURCES)))))
-
-BOWLS = $(call shwspace,$(addprefix $(OBJ),$(patsubst %.ec,%$(B),$(notdir $(_ECSOURCES)))))
+COBJECTS = $(call shwspace,$(_COBJECTS))
+SYMBOLS = $(call shwspace,$(_SYMBOLS))
+IMPORTS = $(call shwspace,$(_IMPORTS))
+ECOBJECTS = $(call shwspace,$(_ECOBJECTS))
+BOWLS = $(call shwspace,$(_BOWLS))
 
 ifdef WINDOWS_TARGET
 
@@ -122,7 +124,7 @@ RCSOURCES =
 RCOBJECTS =
 endif
 
-OBJECTS = $(ECOBJECTS) $(OBJ)$(MODULE).main$(O) $(RCOBJECTS)
+OBJECTS = $(ECOBJECTS) $(OBJ)$(MODULE).main.o $(RCOBJECTS)
 
 SOURCES = $(ECSOURCES) $(RCSOURCES)
 
@@ -212,14 +214,14 @@ endif
 
 PRJ_CFLAGS += \
 	 $(if $(LINUX_TARGET), \
-			 -I/usr/X11R6/include,) \
+		 -I/usr/X11R6/include,) \
 	 $(if $(OSX_TARGET), \
-			 -I/usr/X11R6/include,) \
-	 $(if $(DEBUG), -g, -O2 -ffast-math) $(FPIC) -w \
-			 $(FVISIBILITY) \
-			 -DREPOSITORY_VERSION="\"$(REPOSITORY_VER)\"" \
-			 -I../extras/include \
-			 -DECERE_IDE
+		 -I/usr/X11R6/include,) \
+	 $(if $(DEBUG), -g, -O2 -ffast-math) $(FPIC) -Wall \
+		 $(FVISIBILITY) \
+		 -DREPOSITORY_VERSION="\"$(REPOSITORY_VER)\"" \
+		 -DECERE_IDE \
+		 -I../extras/include
 
 ECFLAGS += -module $(MODULE)
 ECFLAGS += \
@@ -264,7 +266,9 @@ endif
 all: objdir $(TARGET)
 
 objdir:
-	$(call mkdir,$(OBJ))
+	$(if $(wildcard $(OBJ)),,$(call mkdir,$(OBJ)))
+
+.PHONY: src/about.ec
 
 $(OBJ)$(MODULE).main.ec: $(SYMBOLS) $(COBJECTS)
 	$(ECS) $(ARCH_FLAGS) $(ECSLIBOPT) $(SYMBOLS) $(IMPORTS) -symbols obj/$(CONFIG).$(PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX) -o $(OBJ)$(MODULE).main.ec
@@ -277,7 +281,7 @@ $(SYMBOLS): | objdir
 $(OBJECTS): | objdir
 $(TARGET): $(SOURCES) $(RCSOURCES) $(RESOURCES) $(SYMBOLS) $(OBJECTS) | objdir
 ifndef STATIC_LIBRARY_TARGET
-	$(CC) $(OFLAGS) $(OBJECTS) $(LIBS) -o $(TARGET) $(INSTALLNAME)
+	$(CC) $(OFLAGS) $(OBJECTS) $(LIBS) -o $(TARGET) $(INSTALLNAME) $(SONAME)
 ifndef NOSTRIP
 	$(STRIP) $(STRIPOPT) $(TARGET)
 endif
@@ -333,11 +337,11 @@ $(OBJ)NodeProperties.sym: src/dialogs/NodeProperties.ec
 $(OBJ)WorkspaceSettings.sym: src/dialogs/WorkspaceSettings.ec
 	$(ECP) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/dialogs/WorkspaceSettings.ec -o $(OBJ)WorkspaceSettings.sym
 
-$(OBJ)FontPicker.sym: src/dialogs/FontPicker.ec
-	$(ECP) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/dialogs/FontPicker.ec -o $(OBJ)FontPicker.sym
-
 $(OBJ)ProjectTabSettings.sym: src/dialogs/ProjectTabSettings.ec
 	$(ECP) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/dialogs/ProjectTabSettings.ec -o $(OBJ)ProjectTabSettings.sym
+
+$(OBJ)FontPicker.sym: src/dialogs/FontPicker.ec
+	$(ECP) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/dialogs/FontPicker.ec -o $(OBJ)FontPicker.sym
 
 $(OBJ)Project.sym: src/project/Project.ec
 	$(ECP) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/project/Project.ec -o $(OBJ)Project.sym
@@ -354,11 +358,9 @@ $(OBJ)ProjectView.sym: src/project/ProjectView.ec
 $(OBJ)Workspace.sym: src/project/Workspace.ec
 	$(ECP) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/project/Workspace.ec -o $(OBJ)Workspace.sym
 
-ifdef WINDOWS_TARGET
-
+ifneq ($(WINDOWS_TARGET),)
 $(OBJ)vsSupport.sym: src/project/vsSupport.ec
 	$(ECP) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/project/vsSupport.ec -o $(OBJ)vsSupport.sym
-
 endif
 
 $(OBJ)CodeEditor.sym: src/designer/CodeEditor.ec
@@ -369,9 +371,6 @@ $(OBJ)CodeObject.sym: src/designer/CodeObject.ec
 
 $(OBJ)Designer.sym: src/designer/Designer.ec
 	$(ECP) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/designer/Designer.ec -o $(OBJ)Designer.sym
-
-$(OBJ)SyntaxHighlighting.sym: src/designer/SyntaxHighlighting.ec
-	$(ECP) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/designer/SyntaxHighlighting.ec -o $(OBJ)SyntaxHighlighting.sym
 
 $(OBJ)findCtx.sym: src/designer/findCtx.ec
 	$(ECP) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/designer/findCtx.ec -o $(OBJ)findCtx.sym
@@ -387,6 +386,9 @@ $(OBJ)Sheet.sym: src/designer/Sheet.ec
 
 $(OBJ)ToolBox.sym: src/designer/ToolBox.ec
 	$(ECP) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/designer/ToolBox.ec -o $(OBJ)ToolBox.sym
+
+$(OBJ)SyntaxHighlighting.sym: src/designer/SyntaxHighlighting.ec
+	$(ECP) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/designer/SyntaxHighlighting.ec -o $(OBJ)SyntaxHighlighting.sym
 
 $(OBJ)debugFindCtx.sym: src/debugger/debugFindCtx.ec
 	$(ECP) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/debugger/debugFindCtx.ec -o $(OBJ)debugFindCtx.sym
@@ -474,14 +476,14 @@ $(OBJ)NewProjectDialog.c: src/dialogs/NewProjectDialog.ec $(OBJ)NewProjectDialog
 $(OBJ)NodeProperties.c: src/dialogs/NodeProperties.ec $(OBJ)NodeProperties.sym | $(SYMBOLS)
 	$(ECC) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/dialogs/NodeProperties.ec -o $(OBJ)NodeProperties.c -symbols $(OBJ)
 
-$(OBJ)FontPicker.c: src/dialogs/FontPicker.ec $(OBJ)FontPicker.sym | $(SYMBOLS)
-	$(ECC) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/dialogs/FontPicker.ec -o $(OBJ)FontPicker.c -symbols $(OBJ)
-
 $(OBJ)WorkspaceSettings.c: src/dialogs/WorkspaceSettings.ec $(OBJ)WorkspaceSettings.sym | $(SYMBOLS)
 	$(ECC) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/dialogs/WorkspaceSettings.ec -o $(OBJ)WorkspaceSettings.c -symbols $(OBJ)
 
 $(OBJ)ProjectTabSettings.c: src/dialogs/ProjectTabSettings.ec $(OBJ)ProjectTabSettings.sym | $(SYMBOLS)
 	$(ECC) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/dialogs/ProjectTabSettings.ec -o $(OBJ)ProjectTabSettings.c -symbols $(OBJ)
+
+$(OBJ)FontPicker.c: src/dialogs/FontPicker.ec $(OBJ)FontPicker.sym | $(SYMBOLS)
+	$(ECC) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/dialogs/FontPicker.ec -o $(OBJ)FontPicker.c -symbols $(OBJ)
 
 $(OBJ)Project.c: src/project/Project.ec $(OBJ)Project.sym | $(SYMBOLS)
 	$(ECC) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/project/Project.ec -o $(OBJ)Project.c -symbols $(OBJ)
@@ -498,11 +500,9 @@ $(OBJ)ProjectView.c: src/project/ProjectView.ec $(OBJ)ProjectView.sym | $(SYMBOL
 $(OBJ)Workspace.c: src/project/Workspace.ec $(OBJ)Workspace.sym | $(SYMBOLS)
 	$(ECC) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/project/Workspace.ec -o $(OBJ)Workspace.c -symbols $(OBJ)
 
-ifdef WINDOWS_TARGET
-
+ifneq ($(WINDOWS_TARGET),)
 $(OBJ)vsSupport.c: src/project/vsSupport.ec $(OBJ)vsSupport.sym | $(SYMBOLS)
 	$(ECC) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/project/vsSupport.ec -o $(OBJ)vsSupport.c -symbols $(OBJ)
-
 endif
 
 $(OBJ)CodeEditor.c: src/designer/CodeEditor.ec $(OBJ)CodeEditor.sym | $(SYMBOLS)
@@ -513,9 +513,6 @@ $(OBJ)CodeObject.c: src/designer/CodeObject.ec $(OBJ)CodeObject.sym | $(SYMBOLS)
 
 $(OBJ)Designer.c: src/designer/Designer.ec $(OBJ)Designer.sym | $(SYMBOLS)
 	$(ECC) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/designer/Designer.ec -o $(OBJ)Designer.c -symbols $(OBJ)
-
-$(OBJ)SyntaxHighlighting.c: src/designer/SyntaxHighlighting.ec $(OBJ)SyntaxHighlighting.sym | $(SYMBOLS)
-	$(ECC) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/designer/SyntaxHighlighting.ec -o $(OBJ)SyntaxHighlighting.c -symbols $(OBJ)
 
 $(OBJ)findCtx.c: src/designer/findCtx.ec $(OBJ)findCtx.sym | $(SYMBOLS)
 	$(ECC) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/designer/findCtx.ec -o $(OBJ)findCtx.c -symbols $(OBJ)
@@ -531,6 +528,9 @@ $(OBJ)Sheet.c: src/designer/Sheet.ec $(OBJ)Sheet.sym | $(SYMBOLS)
 
 $(OBJ)ToolBox.c: src/designer/ToolBox.ec $(OBJ)ToolBox.sym | $(SYMBOLS)
 	$(ECC) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/designer/ToolBox.ec -o $(OBJ)ToolBox.c -symbols $(OBJ)
+
+$(OBJ)SyntaxHighlighting.c: src/designer/SyntaxHighlighting.ec $(OBJ)SyntaxHighlighting.sym | $(SYMBOLS)
+	$(ECC) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/designer/SyntaxHighlighting.ec -o $(OBJ)SyntaxHighlighting.c -symbols $(OBJ)
 
 $(OBJ)debugFindCtx.c: src/debugger/debugFindCtx.ec $(OBJ)debugFindCtx.sym | $(SYMBOLS)
 	$(ECC) $(CFLAGS) $(CECFLAGS) $(ECFLAGS) $(PRJ_CFLAGS) -c src/debugger/debugFindCtx.ec -o $(OBJ)debugFindCtx.c -symbols $(OBJ)
@@ -621,11 +621,11 @@ $(OBJ)NodeProperties.o: $(OBJ)NodeProperties.c
 $(OBJ)WorkspaceSettings.o: $(OBJ)WorkspaceSettings.c
 	$(CC) $(CFLAGS) $(PRJ_CFLAGS) -c $(OBJ)WorkspaceSettings.c -o $(OBJ)WorkspaceSettings.o
 
-$(OBJ)FontPicker.o: $(OBJ)FontPicker.c
-	$(CC) $(CFLAGS) $(PRJ_CFLAGS) -c $(OBJ)FontPicker.c -o $(OBJ)FontPicker.o
-
 $(OBJ)ProjectTabSettings.o: $(OBJ)ProjectTabSettings.c
 	$(CC) $(CFLAGS) $(PRJ_CFLAGS) -c $(OBJ)ProjectTabSettings.c -o $(OBJ)ProjectTabSettings.o
+
+$(OBJ)FontPicker.o: $(OBJ)FontPicker.c
+	$(CC) $(CFLAGS) $(PRJ_CFLAGS) -c $(OBJ)FontPicker.c -o $(OBJ)FontPicker.o
 
 $(OBJ)Project.o: $(OBJ)Project.c
 	$(CC) $(CFLAGS) $(PRJ_CFLAGS) -c $(OBJ)Project.c -o $(OBJ)Project.o
@@ -642,8 +642,10 @@ $(OBJ)ProjectView.o: $(OBJ)ProjectView.c
 $(OBJ)Workspace.o: $(OBJ)Workspace.c
 	$(CC) $(CFLAGS) $(PRJ_CFLAGS) -c $(OBJ)Workspace.c -o $(OBJ)Workspace.o
 
+ifneq ($(WINDOWS_TARGET),)
 $(OBJ)vsSupport.o: $(OBJ)vsSupport.c
 	$(CC) $(CFLAGS) $(PRJ_CFLAGS) -c $(OBJ)vsSupport.c -o $(OBJ)vsSupport.o
+endif
 
 $(OBJ)CodeEditor.o: $(OBJ)CodeEditor.c
 	$(CC) $(CFLAGS) $(PRJ_CFLAGS) -c $(OBJ)CodeEditor.c -o $(OBJ)CodeEditor.o
@@ -653,9 +655,6 @@ $(OBJ)CodeObject.o: $(OBJ)CodeObject.c
 
 $(OBJ)Designer.o: $(OBJ)Designer.c
 	$(CC) $(CFLAGS) $(PRJ_CFLAGS) -c $(OBJ)Designer.c -o $(OBJ)Designer.o
-
-$(OBJ)SyntaxHighlighting.o: $(OBJ)SyntaxHighlighting.c
-	$(CC) $(CFLAGS) $(PRJ_CFLAGS) -c $(OBJ)SyntaxHighlighting.c -o $(OBJ)SyntaxHighlighting.o
 
 $(OBJ)findCtx.o: $(OBJ)findCtx.c
 	$(CC) $(CFLAGS) $(PRJ_CFLAGS) -c $(OBJ)findCtx.c -o $(OBJ)findCtx.o
@@ -671,6 +670,9 @@ $(OBJ)Sheet.o: $(OBJ)Sheet.c
 
 $(OBJ)ToolBox.o: $(OBJ)ToolBox.c
 	$(CC) $(CFLAGS) $(PRJ_CFLAGS) -c $(OBJ)ToolBox.c -o $(OBJ)ToolBox.o
+
+$(OBJ)SyntaxHighlighting.o: $(OBJ)SyntaxHighlighting.c
+	$(CC) $(CFLAGS) $(PRJ_CFLAGS) -c $(OBJ)SyntaxHighlighting.c -o $(OBJ)SyntaxHighlighting.o
 
 $(OBJ)debugFindCtx.o: $(OBJ)debugFindCtx.c
 	$(CC) $(CFLAGS) $(PRJ_CFLAGS) -c $(OBJ)debugFindCtx.c -o $(OBJ)debugFindCtx.o
@@ -729,36 +731,26 @@ $(OBJ)licensing.o: $(OBJ)licensing.c
 ifdef WINDOWS_TARGET
 
 $(OBJ)resources.o: src/resources.rc
-	$(WINDRES) $(WINDRES_FLAGS) $< $@
+	$(WINDRES) $(WINDRES_FLAGS) src/resources.rc $(OBJ)resources.o
 endif
 
-$(OBJ)$(MODULE).main$(O): $(OBJ)$(MODULE).main.c
-	$(CC) $(CFLAGS) $(PRJ_CFLAGS) -c $(OBJ)$(MODULE).main.c -o $(OBJ)$(MODULE).main$(O)
+$(OBJ)$(MODULE).main.o: $(OBJ)$(MODULE).main.c
+	$(CC) $(CFLAGS) $(PRJ_CFLAGS) -c $(OBJ)$(MODULE).main.c -o $(OBJ)$(MODULE).main.o
 
 cleantarget:
 	$(call rm,$(OBJ)$(MODULE).main.o $(OBJ)$(MODULE).main.c $(OBJ)$(MODULE).main.ec $(OBJ)$(MODULE).main$(I) $(OBJ)$(MODULE).main$(S))
-	$(call rm,$(OBJ)symbols.lst)
-	$(call rm,$(OBJ)objects.lst)
 	$(call rm,$(TARGET))
-ifdef SHARED_LIBRARY_TARGET
-ifdef LINUX_TARGET
-ifdef LINUX_HOST
-	$(call rm,$(OBJ)$(LP)$(MODULE)$(SO)$(basename $(VER)))
-	$(call rm,$(OBJ)$(LP)$(MODULE)$(SO))
-endif
-endif
-endif
 
 clean: cleantarget
 	$(call rm,$(_OBJECTS))
 ifdef WINDOWS_TARGET
-	$(call rm,$(RCOBJECTS))
+	$(call rm,$(_RCOBJECTS))
 endif
-	$(call rm,$(ECOBJECTS))
-	$(call rm,$(COBJECTS))
-	$(call rm,$(BOWLS))
-	$(call rm,$(IMPORTS))
-	$(call rm,$(SYMBOLS))
+	$(call rm,$(_ECOBJECTS))
+	$(call rm,$(_COBJECTS))
+	$(call rm,$(_BOWLS))
+	$(call rm,$(_IMPORTS))
+	$(call rm,$(_SYMBOLS))
 
 realclean: cleantarget
 	$(call rmr,$(OBJ))
