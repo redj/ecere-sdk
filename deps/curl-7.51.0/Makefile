@@ -7,7 +7,7 @@ endif
 # CORE VARIABLES
 
 MODULE := curl
-VERSION := 
+VERSION :=
 CONFIG := release
 ifndef COMPILER
 COMPILER := default
@@ -17,7 +17,6 @@ TARGET_TYPE = staticlib
 
 # FLAGS
 
-ECFLAGS =
 ifndef DEBIAN_PACKAGE
 CFLAGS =
 LDFLAGS =
@@ -44,9 +43,9 @@ include $(_CF_DIR)default.cf
 
 OBJ = obj/$(CONFIG).$(PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX)/
 
-RES = 
+RES =
 
-TARGET = obj/$(CONFIG).$(PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX)/$(LP)curl$(A)
+TARGET = $(OBJ)$(LP)curl$(OUT)
 
 ifdef WINDOWS_TARGET
 
@@ -340,16 +339,16 @@ endif
 LIBS += $(SHAREDLIB) $(EXECUTABLE) $(LINKOPT)
 
 PRJ_CFLAGS += \
-	 $(if $(DEBUG), -g, -O2 -ffast-math) $(FPIC) -Wall -DREPOSITORY_VERSION="\"$(REPOSITORY_VER)\"" \
-			 -DBUILDING_LIBCURL \
-			 -DCURL_DISABLE_LDAP \
-			 -DCURL_STATICLIB \
-			 -DUSE_OPENSSL \
-			 -Iinclude \
-			 -Ilib \
-			 -I../zlib-1.2.8/ \
-			 -I$(OPENSSL_INCLUDE_DIR)
-ECFLAGS += -module $(MODULE)
+	 $(if $(DEBUG), -g, -O2 -ffast-math) $(FPIC) -Wall \
+		 -DBUILDING_LIBCURL \
+		 -DCURL_DISABLE_LDAP \
+		 -DCURL_STATICLIB \
+		 -DUSE_OPENSSL \
+		 -Iinclude \
+		 -Ilib \
+		 -I../zlib-1.2.8 \
+		 -I$(OPENSSL_INCLUDE_DIR)
+
 CECFLAGS += -cpp $(_CPP)
 
 # TARGETS
@@ -373,7 +372,7 @@ ifdef WINDOWS_TARGET
 	$(call addtolistfile,$(RCOBJECTS),$(OBJ)objects.lst)
 endif
 ifndef STATIC_LIBRARY_TARGET
-	$(LD) $(OFLAGS) @$(OBJ)objects.lst $(LIBS) -o $(TARGET) $(INSTALLNAME)
+	$(CC) $(OFLAGS) @$(OBJ)objects.lst $(LIBS) -o $(TARGET) $(INSTALLNAME) $(SONAME)
 ifndef NOSTRIP
 	$(STRIP) $(STRIPOPT) $(TARGET)
 endif
@@ -384,14 +383,8 @@ else
 	$(AR) rcs $(TARGET) $(OBJECTS) $(LIBS)
 endif
 endif
-ifdef SHARED_LIBRARY_TARGET
-ifdef LINUX_TARGET
-ifdef LINUX_HOST
-	$(if $(basename $(VER)),ln -sf $(LP)$(MODULE)$(SO)$(VER) $(OBJ)$(LP)$(MODULE)$(SO)$(basename $(VER)),)
-	$(if $(VER),ln -sf $(LP)$(MODULE)$(SO)$(VER) $(OBJ)$(LP)$(MODULE)$(SO),)
-endif
-endif
-endif
+	$(if SO_LIB_LINKS,$(if $(VER_MAJ),ln -sf $(LP)$(MODULE)$(OUT) $(OBJ)$(LP)$(MODULE)$(SO)$(VER_MAJ),),)
+	$(if SO_LIB_LINKS,$(if $(VER),ln -sf $(LP)$(MODULE)$(OUT) $(OBJ)$(LP)$(MODULE)$(SO),),)
 
 # SYMBOL RULES
 
@@ -642,7 +635,7 @@ $(OBJ)ldap$(O): lib/ldap.c
 ifdef WINDOWS_TARGET
 
 $(OBJ)libcurl$(O): lib/libcurl.rc
-	$(WINDRES) $(WINDRES_FLAGS) $< "$(call escspace,$(call quote_path,$@))"
+	$(WINDRES) $(WINDRES_FLAGS) $(call quote_path,lib/libcurl.rc) "$(call escspace,$(call quote_path,$@))"
 endif
 
 $(OBJ)llist$(O): lib/llist.c
@@ -783,17 +776,11 @@ $(OBJ)wildcard$(O): lib/wildcard.c
 $(OBJ)x509asn1$(O): lib/x509asn1.c
 	$(CC) $(CFLAGS) $(PRJ_CFLAGS) -c $(call quote_path,lib/x509asn1.c) -o $(call quote_path,$@)
 
-cleantarget: objdir
+cleantarget:
 	$(call rm,$(OBJ)objects.lst)
 	$(call rm,$(TARGET))
-ifdef SHARED_LIBRARY_TARGET
-ifdef LINUX_TARGET
-ifdef LINUX_HOST
-	$(call rm,$(OBJ)$(LP)$(MODULE)$(SO)$(basename $(VER)))
-	$(call rm,$(OBJ)$(LP)$(MODULE)$(SO))
-endif
-endif
-endif
+	$(if SO_LIB_LINKS,$(call rm,$(OBJ)$(LP)$(MODULE)$(SO)$(VER_MAJ)),)
+	$(if SO_LIB_LINKS,$(call rm,$(OBJ)$(LP)$(MODULE)$(SO)),)
 
 clean: cleantarget
 	$(call rm,$(_OBJECTS1))
@@ -814,6 +801,6 @@ wipeclean:
 distclean:
 	$(_MAKE) -f $(_CF_DIR)Cleanfile distclean distclean_all_subdirs
 
-Makefile: ;
-$(_CF_DIR)crossplatform.mk: ;
-$(_CF_DIR)default.cf: ;
+$(MAKEFILE_LIST): ;
+$(SOURCES): ;
+$(RESOURCES): ;

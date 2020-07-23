@@ -7,6 +7,7 @@ endif
 # CORE VARIABLES
 
 MODULE := ungif
+VERSION :=
 CONFIG := release
 ifndef COMPILER
 COMPILER := default
@@ -16,7 +17,6 @@ TARGET_TYPE = staticlib
 
 # FLAGS
 
-ECFLAGS =
 ifndef DEBIAN_PACKAGE
 CFLAGS =
 LDFLAGS =
@@ -41,11 +41,11 @@ include $(_CF_DIR)default.cf
 
 # POST-INCLUDES VARIABLES
 
-OBJ = obj/$(CONFIG).$(PLATFORM)$(COMPILER_SUFFIX)/
+OBJ = obj/$(CONFIG).$(PLATFORM)$(COMPILER_SUFFIX)$(DEBUG_SUFFIX)/
 
-RES = 
+RES =
 
-TARGET = obj/$(CONFIG).$(PLATFORM)$(COMPILER_SUFFIX)/$(LP)ungif$(A)
+TARGET = $(OBJ)$(LP)ungif$(OUT)
 
 _OBJECTS = \
 	$(OBJ)dgif_lib.o \
@@ -64,11 +64,7 @@ RESOURCES =
 LIBS += $(SHAREDLIB) $(EXECUTABLE) $(LINKOPT)
 
 PRJ_CFLAGS += \
-	 $(if $(DEBUG), -g, -O2 -ffast-math) $(FPIC) -w $(FVISIBILITY)
-
-
-
-
+	 $(if $(DEBUG), -g, -O2 -ffast-math) $(FPIC) -w
 
 CECFLAGS += -cpp $(_CPP)
 
@@ -77,9 +73,11 @@ CECFLAGS += -cpp $(_CPP)
 all: objdir $(TARGET)
 
 objdir:
-	$(call mkdir,$(OBJ))
+	$(if $(wildcard $(OBJ)),,$(call mkdir,$(OBJ)))
 
-$(TARGET): $(SOURCES) $(RESOURCES) | objdir $(SYMBOLS) $(OBJECTS)
+$(SYMBOLS): | objdir
+$(OBJECTS): | objdir
+$(TARGET): $(SOURCES) $(RESOURCES) $(SYMBOLS) $(OBJECTS) | objdir
 	$(AR) rcs $(TARGET) $(OBJECTS) $(LIBS)
 
 # SYMBOL RULES
