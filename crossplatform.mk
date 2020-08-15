@@ -464,6 +464,38 @@ ifdef WINDOWS_TARGET
  endif
 endif
 
+.PHONY: help
+.NOTPARALLEL: help
+help:
+	@$(call echo,Ecere SDK Make Help)
+	@$(call echo,"")
+	@$(call echo,"help consists of command examples. try them!")
+	@$(call echo,"")
+	@$(call echo,help command examples:)
+	@$(call echo,"")
+	@$(call echo,   $(MAKE_COMMAND) help                                          -- this target)
+	@$(call echo,   $(MAKE_COMMAND) help-troubleshoot                             -- show command examples for troubleshooting)
+	@$(call echo,"")
+	@$(call echo,linux only command examples:)
+	@$(call echo,"")
+	@$(call echo,   time sh -c '$(MAKE_COMMAND) wipeclean all c_bindings cxx_bindings_gen -j9 && echo && make RENAME_B32=1 ARCH=x32 all -j9')
+
+.PHONY: help-troubleshoot
+.NOTPARALLEL: help-troubleshoot
+help-troubleshoot:
+	@$(call echo,troubleshooting command examples:)
+	@$(call echo,"")
+	@$(call echo,   $(MAKE_COMMAND) troubleshoot-example                          -- print the definition for this prepackaged list of variables)
+	@$(call echo,   $(MAKE_COMMAND) print-all-vars-info                           -- print the definition for all variables)
+	@$(call echo,   $(MAKE_COMMAND) print-all-vars-stat                           -- print the definition, origin and flavor for all variables)
+	@$(call echo,   $(MAKE_COMMAND) print-var-info-PLATFORM                       -- print the definition for the PLATFORM variable)
+	@$(call echo,   $(MAKE_COMMAND) print-substr-vars-full-DIR                    -- print all information for all variables containing the DIR string)
+	@$(call echo,"")
+	@$(call echo,available modes for print-var-<mode>-<name> and print-substr-vars-<mode>-<substring> targets:)
+	@$(call echo,   info (definition only)$(comma) eval (value only)$(comma) both (definition and value)$(comma))
+	@$(call echo,   stat (definition$(comma) origin and flavor) and full (definition$(comma) value$(comma) origin and flavor))
+	@$(call echo,"")
+
 var_info = $(if $(value $1),$1 = $(value $1),$1 is defined as an empty value)
 var_eval = $(if $(value $1),$(if $($1),$1 = $($1),$1 evaluates to an empty value),$1 is defined as an empty value)
 var_both = $(if $(value $1),$1 = $(value $1) $(if $($1),$(if $(call str_is,$($1),$(value $1)),(value equal to definition),= $($1)),= (empty value)),$1 is defined as an empty value)
