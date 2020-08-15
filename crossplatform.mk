@@ -1,5 +1,13 @@
+empty :=
+space := $(empty) $(empty)
+str_is = $(if $(subst $2,,$1),,true)
+single_goal = $(if $(word 2,$(MAKECMDGOALS)),,$(word 1,$(MAKECMDGOALS)))
+single_goal_split = $(subst -,$(space),$1)
+goals_is_single_print_target = $(if $(single_goal),$(if $(call str_is,$(word 1,$(single_goal_split)),print),$(if $(call str_is,$(word 2,$(single_goal_split)),var),true,$(if $(call str_is,$(word 2,$(single_goal_split)),substr),$(if $(call str_is,$(word 3,$(single_goal_split)),vars),true,),)),),)
 ifneq ($(wildcard config.mk),)
+ifeq ($(goals_is_single_print_target),)
 $(info Using config.mk configuration file.)
+endif
 include config.mk
 endif
 
@@ -455,3 +463,50 @@ ifdef WINDOWS_TARGET
   endif
  endif
 endif
+
+var_info = $(if $(value $1),$1 = $(value $1),$1 is defined as an empty value)
+var_eval = $(if $(value $1),$(if $($1),$1 = $($1),$1 evaluates to an empty value),$1 is defined as an empty value)
+var_both = $(if $(value $1),$1 = $(value $1) $(if $($1),$(if $(call str_is,$($1),$(value $1)),(value equal to definition),= $($1)),= (empty value)),$1 is defined as an empty value)
+var_stat = $(call var_info,$1) [$(origin $1) $(flavor $1)]
+var_full = $(call var_both,$1) [$(origin $1) $(flavor $1)]
+info_var = $(info $(call $(if $2,$2,var_info),$1))
+info_check_var_defined = $(info $(if $(subst $(space),,$(foreach var,$(.VARIABLES),$(if $(subst $1,,$(var)),,1))),$(call $(if $2,$2,var_info),$1),$1 is not defined))
+info_all_vars = $(foreach var,$(sort $(.VARIABLES)),$(call info_var,$(var),$2))
+info_all_substr_vars = $(foreach var,$(sort $(.VARIABLES)),$(if $(findstring $1,$(var)),$(call info_var,$(var),$2),))
+msg_var_eval_crash = is not provided since evaluating variables that use control flow functions will crash
+
+.PHONY: print-all-vars-info print-all-vars-eval print-all-vars-both print-all-vars-stat print-all-vars-full
+.NOTPARALLEL: print-all-vars-info print-all-vars-eval print-all-vars-both print-all-vars-stat print-all-vars-full
+print-all-vars-info: ; @$(call info_all_vars)
+print-all-vars-eval: ; @$(info note: print-all-vars-eval $(msg_var_eval_crash))
+print-all-vars-both: ; @$(info note: print-all-vars-both $(msg_var_eval_crash))
+print-all-vars-stat: ; @$(if $(subst all,,$*),$(call info_check_var_defined,$*,var_stat),$(call info_all_vars,var_stat))
+print-all-vars-full: ; @$(info note: print-all-vars-full $(msg_var_eval_crash))
+
+.PHONY: print-var-info-% print-var-eval-% print-var-both-% print-var-stat-% print-var-full-%
+.NOTPARALLEL: print-var-info-% print-var-eval-% print-var-both-% print-var-stat-% print-var-full-%
+print-var-info-%: ; @$(call info_check_var_defined,$*)
+print-var-eval-%: ; @$(call info_check_var_defined,$*,var_eval)
+print-var-both-%: ; @$(call info_check_var_defined,$*,var_both)
+print-var-stat-%: ; @$(call info_check_var_defined,$*,var_stat)
+print-var-full-%: ; @$(call info_check_var_defined,$*,var_full)
+
+.PHONY: print-substr-vars-info-% print-substr-vars-eval-% print-substr-vars-both-% print-substr-vars-stat-% print-substr-vars-full-%
+.NOTPARALLEL: print-substr-vars-info-% print-substr-vars-eval-% print-substr-vars-both-% print-substr-vars-stat-% print-substr-vars-full-%
+print-substr-vars-info-%: ; @$(call info_all_substr_vars,$*)
+print-substr-vars-eval-%: ; @$(call info_all_substr_vars,$*,var_eval)
+print-substr-vars-both-%: ; @$(call info_all_substr_vars,$*,var_both)
+print-substr-vars-stat-%: ; @$(call info_all_substr_vars,$*,var_stat)
+print-substr-vars-full-%: ; @$(call info_all_substr_vars,$*,var_full)
+
+.PHONY: troubleshoot-example
+.NOTPARALLEL: troubleshoot-example
+troubleshoot-example:
+	@$(call info_check_var_defined,OS,var_both)
+	@$(call info_check_var_defined,TERM,var_both)
+	@$(call info_check_var_defined,MSYSCON,var_both)
+	@$(call info_check_var_defined,HOST_PLATFORM,var_both)
+	@$(call info_check_var_defined,WIN_PS_TOOLS,var_both)
+	@$(call info_check_var_defined,WIN_SHELL_COMMANDS,var_both)
+
+.DEFAULT_GOAL =
