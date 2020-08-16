@@ -503,6 +503,8 @@ help:
 	@$(info help consists of command examples. try them!)
 	@$(info )
 	@$(info $(_mkcmd_example) help                                          -- this)
+	@$(info $(_mkcmd_example) help-install                                  -- install instructions)
+	@$(info $(_mkcmd_example) help-dependencies                             -- dependencies assistance)
 	@$(info $(_mkcmd_example) help-advanced                                 -- advanced build commands)
 	@$(info $(_mkcmd_example) help-troubleshoot                             -- troubleshooting commands)
 	@$(info )
@@ -514,9 +516,10 @@ help:
 	@$(info $(_mkcmd_example) wipeclean all                                 -- fully rebuild)
 	@$(info $(_mkcmd_example) ARCH=x32                                      -- build 32-bit binaries)
 	@$(info $(_mkcmd_example) ENABLE_SSL=y                                  -- enable OpenSSL in Ecere library)
-	@$(info $(_mkcmd_example) EDASQLite=y                                   -- build SQLite driver for EDA)
+	@$(info $(_mkcmd_example) DISABLE_EDA_SQLITE=y                          -- don't build SQLite driver for EDA, builds by default)
+	@$(info $(_mkcmd_example) DISABLE_EDA_dBASE=y                           -- don't build dBASE driver for EDA, builds by default)
 	@$(info $(_mkcmd_example) EDASQLiteCipher=y                             -- build SQLiteCipher driver for EDA)
-	@$(info $(_mkcmd_example) EDAdBASE=y                                    -- build dBASE driver for EDA)
+	@$(info $(_mkcmd_example) ECERE_AUDIO=n                                 -- don't build Ecere Audio)
 	@$(info $(_mkcmd_example) DISABLE_BINARY_COMPRESSION=y                  -- disable use of binary compression)
 	@$(info )
 	@$(info $(_mkcmd_example) ENABLE_SSL=y EDASQLite=y all -j9              -- common build)
@@ -527,6 +530,38 @@ help:
 	@$(info $(_mkcmd_example) clean                                         -- delete all intermediate object files)
 	@$(info $(_mkcmd_example) realclean                                     -- remove all release intermediate object directories)
 	@$(info $(_mkcmd_example) wipeclean                                     -- remove all intermediate object directories)
+	@$(info )
+
+NOT_PARALLEL_TARGETS += help-install
+.PHONY: help-install
+help-install:
+	@$(info install instructions:)
+	@$(info )
+	@$(info $(_example_space)sudo make install                              -- classic linux install)
+	@$(info )
+
+NOT_PARALLEL_TARGETS += help-dependencies
+.PHONY: help-dependencies
+help-dependencies:
+	@$(info dependencies assistance:)
+	@$(info )
+	@$(info $(_example_space)sudo apt install xxxx                          -- debian dependencies installation command)
+	@$(info )
+	@$(info dependencies of ecere library:)
+	@$(info $(_example_space)zlib$(comma) NCurses$(comma) X11$(comma) X extensions (Shm$(comma) Shaping$(comma) Render)$(comma) OpenGL / GLX (Mesa)$(comma))
+	@$(info $(_example_space)FontConfig$(comma) FreeType$(comma) GifLib$(comma) LibJPEG$(comma) LibPNG$(comma) ALSA)
+	@$(info )
+	@$(info optional dependencies of ecere library:)
+	@$(info $(_example_space)OpenSSL)
+	@$(info )
+	@$(info dependencies of EDA library:)
+	@$(info $(_example_space)libFFI)
+	@$(info )
+	@$(info dependencies of SQLite EDA driver:)
+	@$(info $(_example_space)SQLite)
+	@$(info )
+	@$(info optional toolchain dependencies:)
+	@$(info $(_example_space)UPX)
 	@$(info )
 
 NOT_PARALLEL_TARGETS += help-advanced
