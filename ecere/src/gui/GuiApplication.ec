@@ -814,6 +814,13 @@ public:
 
    void Wait(void)
    {
+      static Time lastTime = 0;
+
+      Time time = GetTime();
+      if(!lastTime) lastTime = time;
+      if(time - lastTime < 1 / Max(18.2, (double)timerResolution)) return;
+      lastTime = time;
+
 #if (defined(__unix__) || defined(__APPLE__)) && !defined(__ANDROID__) && !defined(__EMSCRIPTEN__)
       if(xGlobalDisplay)
          XUnlockDisplay(xGlobalDisplay);
