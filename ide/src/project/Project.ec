@@ -3054,7 +3054,14 @@ private:
          f.Puts("# FLAGS\n\n");
 
          f.Puts("ECFLAGS =\n");
-         f.Puts("ifndef DEBIAN_PACKAGE\n" "CFLAGS =\n" "LDFLAGS =\n" "endif\n");
+
+         f.Puts("ifndef DEBIAN_PACKAGE\n");
+         f.Printf("_%s := $(%s)\n" "override %s = $(_%s)\n", "CPPFLAGS");
+         f.Printf("_%s := $(%s)\n" "override %s = $(_%s)\n", "CFLAGS");
+         f.Printf("_%s := $(%s)\n" "override %s = $(_%s)\n", "CXXFLAGS");
+         f.Printf("_%s := $(%s)\n" "override %s = $(_%s)\n", "LDFLAGS");
+         f.Printf("_%s := $(%s)\n" "override %s = $(_%s)\n", "OWFLAGS");
+         f.Puts("endif\n");
          f.Puts("PRJ_CFLAGS =\n");
          f.Puts("CECFLAGS =\n");
          f.Puts("OFLAGS =\n");
